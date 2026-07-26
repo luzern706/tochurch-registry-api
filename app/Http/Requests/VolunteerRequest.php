@@ -13,6 +13,7 @@ class VolunteerRequest extends FormRequest
     private const FREQUENCIES = ['weekly', 'biweekly', 'monthly'];
     private const PARTICIPATION_TYPES = ['application', 'assignment'];
     private const STATUSES = ['active', 'inactive'];
+    private const ATTENDANCE_STATUSES = ['present', 'absent', 'late', 'excused'];
 
     public function authorize(): bool
     {
@@ -31,6 +32,11 @@ class VolunteerRequest extends FormRequest
             'unassignVolunteer'   => $this->mappingKeyRules(),
             'getVolunteersByTeam' => $this->getVolunteersByTeamRules(),
             'getTeamsByMember'    => $this->getTeamsByMemberRules(),
+            'getHistory'          => $this->historyRules(),
+            'getTeamHistory'      => $this->teamHistoryRules(),
+            'getAttendanceSheet'  => $this->teamKeyRules(),
+            'saveAttendance'      => $this->saveAttendanceRules(),
+            'getMemberAttendanceStats' => $this->teamKeyRules(),
             default               => [],
         };
     }
@@ -161,6 +167,47 @@ class VolunteerRequest extends FormRequest
     {
         return [
             'member_id' => ['required', 'integer', 'min:1'],
+        ];
+    }
+
+    private function historyRules(): array
+    {
+        return [
+            'member_id'    => ['nullable', 'integer', 'min:1'],
+            'team_id'      => ['nullable', 'integer', 'min:1'],
+            'status'       => ['nullable', 'in:' . implode(',', self::STATUSES)],
+            'service_type' => ['nullable', 'string', 'max:30'],
+            'keyword'      => ['nullable', 'string', 'max:100'],
+            'from_date'    => ['nullable', 'date'],
+            'to_date'      => ['nullable', 'date'],
+            'page'         => ['nullable', 'integer', 'min:1'],
+            'size'         => ['nullable', 'integer', 'min:1', 'max:100'],
+        ];
+    }
+
+    private function teamHistoryRules(): array
+    {
+        return [
+            'team_id'      => ['nullable', 'integer', 'min:1'],
+            'service_type' => ['nullable', 'string', 'max:30'],
+            'mode'         => ['nullable', 'in:' . implode(',', self::MODES)],
+            'keyword'      => ['nullable', 'string', 'max:100'],
+            'from_date'    => ['nullable', 'date'],
+            'to_date'      => ['nullable', 'date'],
+            'page'         => ['nullable', 'integer', 'min:1'],
+            'size'         => ['nullable', 'integer', 'min:1', 'max:100'],
+        ];
+    }
+
+    private function saveAttendanceRules(): array
+    {
+        return [
+            'team_id'             => ['required', 'integer', 'min:1'],
+            'service_date'        => ['required', 'date'],
+            'records'             => ['required', 'array', 'min:1'],
+            'records.*.member_id' => ['required', 'integer', 'min:1'],
+            'records.*.status'    => ['required', 'in:' . implode(',', self::ATTENDANCE_STATUSES)],
+            'records.*.note'      => ['nullable', 'string', 'max:200'],
         ];
     }
 

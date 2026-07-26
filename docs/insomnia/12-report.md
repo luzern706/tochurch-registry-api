@@ -6,10 +6,13 @@ URL prefix: `{{ base_url }}/v4/report`
 | # | 메서드 | URL | 설명 |
 |---|---|---|---|
 | 1 | POST | `/v4/report/getMemberStats` | 교인 통계 (총원, 성별, 연령대, 직분, 등급, 상태) |
-| 2 | POST | `/v4/report/getAttendanceStats` | 출석 통계 (출석률, 일별 추이) |
-| 3 | POST | `/v4/report/getOfferingStats` | 헌금 통계 (총액, 카테고리별, 월별 추이) |
-| 4 | POST | `/v4/report/getVisitStats` | 심방 통계 (건수, 심방자 Top 10, 유형별) |
-| 5 | POST | `/v4/report/getDashboard` | 종합 요약 (교인 수, 이번 주 출석률, 이번 달 헌금/심방) |
+| 2 | POST | `/v4/report/getAttendanceStats` | 출석 통계 (출석률, 일별 추이, 예배/조직 필터) |
+| 3 | POST | `/v4/report/getAttendanceStatsByOrg` | 조직별 출석 통계 (조직별 출석률/평균 인원) |
+| 4 | POST | `/v4/report/getStatsByService` | 예배별 출석 통계 (예배별 평균 출석/출석률) |
+| 5 | POST | `/v4/report/getMemberRateDistribution` | 개인 출석률 분포 (5구간 버킷) |
+| 6 | POST | `/v4/report/getOfferingStats` | 헌금 통계 (총액, 카테고리별, 월별 추이) |
+| 7 | POST | `/v4/report/getVisitStats` | 심방 통계 (건수, 심방자 Top 10, 유형별) |
+| 8 | POST | `/v4/report/getDashboard` | 종합 요약 (교인 수, 이번 주 출석률, 이번 달 헌금/심방) |
 
 ---
 
@@ -105,7 +108,112 @@ URL prefix: `{{ base_url }}/v4/report`
 
 ---
 
-## 3. POST `/v4/report/getOfferingStats`
+## 3. POST `/v4/report/getAttendanceStatsByOrg`
+
+### Request Body
+```json
+{
+  "from_date": "2026-05-01",
+  "to_date": "2026-05-31",
+  "service_id": null,
+  "organization_id": null
+}
+```
+
+**파라미터:**
+- `from_date`, `to_date` (date, required)
+- `service_id` (integer, optional) — 특정 예배 필터
+- `organization_id` (integer, optional) — 해당 조직 + 하위 조직만 필터
+
+### Response — 성공
+```json
+{
+  "status": "success", ..., "data": {
+    "list": [
+      {
+        "org_id": 1,
+        "org_name": "청년부",
+        "present_count": 120,
+        "absent_count": 20,
+        "member_count": 35,
+        "date_count": 4,
+        "avg_rate": 85.7,
+        "avg_present": 30.0
+      }
+    ]
+  }
+}
+```
+- `org_name`: 상위 조직 있을 시 `"상위 > 하위"` 형식
+- `avg_rate`: `present / (present + absent) * 100`, 분모 0이면 `null`
+- `avg_present`: `present_count / date_count`, date_count 0이면 `null`
+
+---
+
+## 4. POST `/v4/report/getStatsByService`
+
+### Request Body
+```json
+{
+  "from_date": "2026-05-01",
+  "to_date": "2026-05-31"
+}
+```
+
+**파라미터:**
+- `from_date`, `to_date` (date, required)
+
+### Response — 성공
+```json
+{
+  "status": "success", ..., "data": {
+    "list": [
+      { "service_id": 1, "service_name": "주일 1부", "avg_present": 142.5, "rate": 89.1 },
+      { "service_id": 2, "service_name": "주일 2부", "avg_present": 98.0,  "rate": 83.2 }
+    ]
+  }
+}
+```
+- `avg_present`: `present_count / date_count`, 날짜 없으면 `null`
+- `rate`: `present / (present + absent) * 100`, 분모 0이면 `null`
+
+---
+
+## 5. POST `/v4/report/getMemberRateDistribution`
+
+### Request Body
+```json
+{
+  "from_date": "2026-05-01",
+  "to_date": "2026-05-31"
+}
+```
+
+**파라미터:**
+- `from_date`, `to_date` (date, required)
+
+### Response — 성공
+```json
+{
+  "status": "success", ..., "data": {
+    "total": 156,
+    "list": [
+      { "bucket": "90_plus",  "count": 60, "percent": 38.5 },
+      { "bucket": "80_89",    "count": 30, "percent": 19.2 },
+      { "bucket": "70_79",    "count": 20, "percent": 12.8 },
+      { "bucket": "60_69",    "count": 15, "percent": 9.6  },
+      { "bucket": "under_60", "count": 20, "percent": 12.8 },
+      { "bucket": "no_record","count": 11, "percent": 7.1  }
+    ]
+  }
+}
+```
+- `total`: 전체 활성 교인 수
+- `bucket` 값: `90_plus` / `80_89` / `70_79` / `60_69` / `under_60` / `no_record`
+
+---
+
+## 6. POST `/v4/report/getOfferingStats`  <!-- 구 3번 -->
 
 ### Request Body
 ```json

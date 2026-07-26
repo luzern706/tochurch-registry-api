@@ -67,7 +67,11 @@ class WorshipRequest extends FormRequest
     {
         return [
             'name'          => ['required', 'string', 'max:50'],
+            'description'   => ['nullable', 'string', 'max:200'],
+            'note'          => ['nullable', 'string', 'max:200'],
+            'category'      => ['nullable', 'string', 'in:regular,other'],
             'day_of_week'   => ['nullable', 'integer', 'between:0,6'],
+            'start_time'    => ['nullable', 'date_format:H:i'],
             'target_org_id' => ['nullable', 'integer', 'min:1'],
             'sort_order'    => ['nullable', 'integer'],
             'is_active'     => ['nullable', 'boolean'],
@@ -79,7 +83,11 @@ class WorshipRequest extends FormRequest
         return [
             'service_id'    => ['required', 'integer', 'min:1'],
             'name'          => ['sometimes', 'string', 'max:50'],
+            'description'   => ['sometimes', 'nullable', 'string', 'max:200'],
+            'note'          => ['sometimes', 'nullable', 'string', 'max:200'],
+            'category'      => ['sometimes', 'string', 'in:regular,other'],
             'day_of_week'   => ['sometimes', 'nullable', 'integer', 'between:0,6'],
+            'start_time'    => ['sometimes', 'nullable', 'date_format:H:i'],
             'target_org_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'sort_order'    => ['sometimes', 'integer'],
             'is_active'     => ['sometimes', 'boolean'],

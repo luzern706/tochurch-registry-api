@@ -42,6 +42,51 @@ class OrganizationService
         }
     }
 
+    /**
+     * 사이드바 그룹 목록용 조직 트리 (최상위 → 하위, 소속 교인 수 포함)
+     * jwt.auth만 요구 — 전 역할(pastor/minister/volunteer 포함)이 사이드바를 보므로
+     * permission:SETTING 게이트를 걸지 않는다(v4/profile/* 와 동일한 이유).
+     */
+    public function getSidebarTree(): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $flat = $this->organizationRepository->getSidebarTree($churchId);
+
+            $byParent = [];
+            foreach ($flat as $row) {
+                $byParent[$row->parent_id ?? 0][] = $row;
+            }
+
+            $build = function (int $parentId) use (&$build, $byParent) {
+                $nodes = [];
+                foreach ($byParent[$parentId] ?? [] as $row) {
+                    $children     = $build((int) $row->id);
+                    $memberCount  = (int) $row->member_count;
+                    $childrenSum  = array_sum(array_column($children, 'member_count'));
+
+                    $nodes[] = [
+                        'id'            => (int) $row->id,
+                        'name'          => $row->name,
+                        'sort_order'    => (int) $row->sort_order,
+                        'member_count'  => $memberCount + $childrenSum,
+                        'children'      => $children,
+                    ];
+                }
+                return $nodes;
+            };
+
+            return ApiResponse::success(['list' => $build(0)]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[OrganizationService] getSidebarTree error: " . $e->getMessage(), "organization");
+            return ApiResponse::fail('INTERNAL_ERROR', '조직 트리 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
+
     public function getOrganizationDetail(int $authMemberId, int $organizationId): JsonResponse
     {
         try {
@@ -79,11 +124,12 @@ class OrganizationService
             }
 
             $newId = $this->organizationRepository->insertOrganization([
-                'church_id'  => $churchId,
-                'parent_id'  => $parentId,
-                'name'       => $input['name'],
-                'sort_order' => $input['sort_order'] ?? 0,
-                'is_active'  => 1,
+                'church_id'   => $churchId,
+                'parent_id'   => $parentId,
+                'name'        => $input['name'],
+                'description' => $input['description'] ?? null,
+                'sort_order'  => $input['sort_order'] ?? 0,
+                'is_active'   => 1,
             ]);
 
             AuditLogHelper::logCreate(
@@ -119,6 +165,9 @@ class OrganizationService
             $data = [];
             if (array_key_exists('name', $input)) {
                 $data['name'] = $input['name'];
+            }
+            if (array_key_exists('description', $input)) {
+                $data['description'] = $input['description'];
             }
             if (array_key_exists('sort_order', $input)) {
                 $data['sort_order'] = (int) $input['sort_order'];

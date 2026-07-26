@@ -58,6 +58,20 @@ class VisitController extends Controller
         return $this->visitService->updateVisit($authMemberId, $visitId, $validated);
     }
 
+    public function updateStatus(VisitRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        $validated = $request->validated();
+        return $this->visitService->updateVisitStatus(
+            $authMemberId,
+            (int) $validated['visit_id'],
+            $validated['status']
+        );
+    }
+
     public function delete(VisitRequest $request): JsonResponse
     {
         $authMemberId = JwtHelper::getAdminNoFromRequest($request);
@@ -66,5 +80,32 @@ class VisitController extends Controller
         }
         $validated = $request->validated();
         return $this->visitService->deleteVisit($authMemberId, (int) $validated['visit_id']);
+    }
+
+    public function bulkCompleteVisit(VisitRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->visitService->bulkCompleteVisit($authMemberId, $request->validated());
+    }
+
+    public function getUnvisitedList(VisitRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->visitService->getUnvisitedList($authMemberId, $request->validated());
+    }
+
+    public function getAbsenceTargetList(VisitRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->visitService->getAbsenceTargetList($request->validated());
     }
 }

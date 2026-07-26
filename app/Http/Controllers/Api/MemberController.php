@@ -18,6 +18,16 @@ class MemberController extends Controller
         $this->memberService = $memberService;
     }
 
+    public function checkEmail(MemberRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+
+        return $this->memberService->checkEmail($authMemberId, $request->validated());
+    }
+
     public function getList(MemberRequest $request): JsonResponse
     {
         $authMemberId = JwtHelper::getAdminNoFromRequest($request);

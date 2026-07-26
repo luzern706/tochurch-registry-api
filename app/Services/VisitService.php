@@ -18,8 +18,10 @@ class VisitService
         'member_id', 'visit_type', 'event_reason', 'visit_date',
         'visitor_member_id', 'manager_member_id', 'place', 'companion',
         'attendee_count', 'content', 'common_note', 'private_note',
-        'add_to_prayer',
+        'add_to_prayer', 'status',
     ];
+
+    private const ALLOWED_STATUSES = ['scheduled', 'in_progress', 'completed', 'cancelled'];
 
     protected VisitRepository $visitRepository;
     protected MemberRepository $memberRepository;
@@ -91,16 +93,30 @@ class VisitService
             $data['created_by']    = $authMemberId;
             $data['add_to_prayer'] = (int) (bool) ($data['add_to_prayer'] ?? 0);
 
+            // status 미전달 시 날짜 기반 자동 설정
+            if (empty($data['status'])) {
+                $today = date('Y-m-d');
+                if ($data['visit_date'] > $today)       $data['status'] = 'scheduled';
+                elseif ($data['visit_date'] === $today) $data['status'] = 'in_progress';
+                else                                    $data['status'] = 'scheduled'; // 과거 등록은 미확인 → DB 기본값 유지
+            }
+
             $newId = DB::transaction(function () use ($data, $authMemberId) {
                 $visitId = $this->visitRepository->insertVisit($data);
 
                 if ($data['add_to_prayer'] === 1) {
                     $this->visitRepository->insertPrayerRecord([
-                        'member_id'   => $data['member_id'],
-                        'church_id'   => $data['church_id'],
-                        'content'     => $data['content'],
-                        'is_resolved' => 0,
-                        'created_by'  => $authMemberId,
+                        'member_id'       => $data['member_id'],
+                        'church_id'       => $data['church_id'],
+                        'title'           => '심방 연계 기도',
+                        'content'         => $data['content'] ?? '',
+                        'visibility'      => 'leaders',
+                        'status'          => 'active',
+                        'visit_record_id' => $visitId,
+                        'is_resolved'     => 0,
+                        'created_by'      => $authMemberId,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
                     ]);
                 }
 
@@ -176,11 +192,17 @@ class VisitService
                 // (1→0 변경 시 기존 기도 record 는 유지 — 독립적 라이프사이클)
                 if (!$wasInPrayer && $becomesPrayer) {
                     $this->visitRepository->insertPrayerRecord([
-                        'member_id'   => $data['member_id']  ?? (int) $visit->member_id,
-                        'church_id'   => (int) $visit->church_id,
-                        'content'     => $data['content']    ?? $visit->content,
-                        'is_resolved' => 0,
-                        'created_by'  => $authMemberId,
+                        'member_id'       => $data['member_id'] ?? (int) $visit->member_id,
+                        'church_id'       => (int) $visit->church_id,
+                        'title'           => '심방 연계 기도',
+                        'content'         => $data['content'] ?? $visit->content ?? '',
+                        'visibility'      => 'leaders',
+                        'status'          => 'active',
+                        'visit_record_id' => $visitId,
+                        'is_resolved'     => 0,
+                        'created_by'      => $authMemberId,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
                     ]);
                 }
             });
@@ -203,6 +225,44 @@ class VisitService
         } catch (\Exception $e) {
             LogHelper::logWrite("[VisitService] updateVisit error: " . $e->getMessage(), "visit");
             return ApiResponse::fail('INTERNAL_ERROR', '심방 수정 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    public function updateVisitStatus(int $authMemberId, int $visitId, string $status): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            if (!in_array($status, self::ALLOWED_STATUSES, true)) {
+                return ApiResponse::fail('VALIDATION_FAILED', '올바르지 않은 상태값입니다.', 400);
+            }
+
+            $visit = $this->visitRepository->getVisitById($visitId);
+            if ($visit === null || (int) $visit->church_id !== $churchId) {
+                return ApiResponse::fail('NOT_FOUND', '심방 기록을 찾을 수 없습니다.', 404);
+            }
+
+            $this->visitRepository->updateVisit($visitId, ['status' => $status]);
+
+            AuditLogHelper::logUpdate(
+                memberId:      $authMemberId,
+                churchId:      $churchId,
+                menuCode:      AuditMenuCode::VISIT,
+                summary:       "심방 상태 변경: visit#{$visitId} → {$status}",
+                targetId:      (string) $visitId,
+                targetLabel:   null,
+                before:        ['status' => $visit->status ?? 'scheduled'],
+                after:         ['status' => $status],
+                compareFields: ['status'],
+            );
+
+            return ApiResponse::success(['visit_id' => $visitId, 'status' => $status]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[VisitService] updateVisitStatus error: " . $e->getMessage(), "visit");
+            return ApiResponse::fail('INTERNAL_ERROR', '상태 변경 중 오류가 발생했습니다.', 500);
         }
     }
 
@@ -236,6 +296,71 @@ class VisitService
         } catch (\Exception $e) {
             LogHelper::logWrite("[VisitService] deleteVisit error: " . $e->getMessage(), "visit");
             return ApiResponse::fail('INTERNAL_ERROR', '심방 삭제 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    public function bulkCompleteVisit(int $authMemberId, array $filters): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $memberIds = $filters['member_ids'] ?? [];
+            if (empty($memberIds)) {
+                return ApiResponse::fail('VALIDATION_FAILED', '교인을 선택해주세요.', 400);
+            }
+
+            $visitDate = $filters['visit_date'] ?? now()->toDateString();
+            $count = $this->visitRepository->bulkCompleteVisit($churchId, $authMemberId, $memberIds, $visitDate);
+
+            AuditLogHelper::logCreate(
+                memberId:    $authMemberId,
+                churchId:    $churchId,
+                menuCode:    AuditMenuCode::VISIT,
+                summary:     "대심방 일괄 완료 처리 {$count}건",
+                targetId:    implode(',', $memberIds),
+                targetLabel: "일괄완료",
+                created:     ['member_ids' => $memberIds, 'visit_date' => $visitDate],
+            );
+
+            return ApiResponse::success(['count' => $count]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[VisitService] bulkCompleteVisit error: " . $e->getMessage(), "visit");
+            return ApiResponse::fail('INTERNAL_ERROR', '일괄 완료 처리 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    public function getUnvisitedList(int $authMemberId, array $filters): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $year = $filters['year'] ?? date('Y');
+            $data = $this->visitRepository->getUnvisitedList($churchId, $year, $filters);
+            return ApiResponse::success($data);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[VisitService] getUnvisitedList error: " . $e->getMessage(), "visit");
+            return ApiResponse::fail('INTERNAL_ERROR', '미심방 목록 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    public function getAbsenceTargetList(array $filters): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+            $data = $this->visitRepository->getAbsenceTargetList($churchId, $filters);
+            return ApiResponse::success($data);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[VisitService] getAbsenceTargetList error: " . $e->getMessage(), "visit");
+            return ApiResponse::fail('INTERNAL_ERROR', '심방 대상 목록 조회 중 오류가 발생했습니다.', 500);
         }
     }
 

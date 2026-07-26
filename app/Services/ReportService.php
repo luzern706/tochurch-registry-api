@@ -93,6 +93,108 @@ class ReportService
         }
     }
 
+    public function getStatsByService(int $authMemberId, array $input): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+
+            $rows = $this->reportRepository->getStatsByService($churchId, $input['from_date'], $input['to_date']);
+
+            $list = array_map(function ($row) {
+                $checked  = (int)$row->present_count + (int)$row->absent_count;
+                $rate     = $checked > 0 ? round((int)$row->present_count / $checked * 100, 1) : null;
+                $avgPresent = (int)$row->date_count > 0
+                    ? round((int)$row->present_count / (int)$row->date_count, 1) : null;
+                return [
+                    'service_id'   => $row->service_id,
+                    'service_name' => $row->service_name,
+                    'avg_present'  => $avgPresent,
+                    'rate'         => $rate,
+                ];
+            }, $rows);
+
+            return ApiResponse::success(['list' => $list]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[ReportService] getStatsByService error: " . $e->getMessage(), "report");
+            return ApiResponse::fail('INTERNAL_ERROR', '예배별 출석 통계 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    public function getMemberRateDistribution(int $authMemberId, array $input): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+
+            $rows  = $this->reportRepository->getMemberRateDistribution($churchId, $input['from_date'], $input['to_date']);
+            $total = $this->reportRepository->countMembers($churchId);
+
+            $bucketMap = [];
+            foreach ($rows as $row) {
+                $bucketMap[$row->bucket] = (int)$row->count;
+            }
+
+            $buckets = ['90_plus', '80_89', '70_79', '60_69', 'under_60', 'no_record'];
+            $list = array_map(function ($key) use ($bucketMap, $total) {
+                $count = $bucketMap[$key] ?? 0;
+                return [
+                    'bucket'  => $key,
+                    'count'   => $count,
+                    'percent' => $total > 0 ? round($count / $total * 100, 1) : null,
+                ];
+            }, $buckets);
+
+            return ApiResponse::success(['total' => $total, 'list' => $list]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[ReportService] getMemberRateDistribution error: " . $e->getMessage(), "report");
+            return ApiResponse::fail('INTERNAL_ERROR', '개인 출석률 분포 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    public function getAttendanceStatsByOrg(int $authMemberId, array $input): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $fromDate       = $input['from_date'];
+            $toDate         = $input['to_date'];
+            $serviceId      = isset($input['service_id'])      ? (int) $input['service_id']      : null;
+            $organizationId = isset($input['organization_id']) ? (int) $input['organization_id'] : null;
+
+            $rows = $this->reportRepository->getAttendanceStatsByOrg($churchId, $serviceId, $fromDate, $toDate, $organizationId);
+
+            $list = array_map(function ($row) {
+                $checked = (int)$row->present_count + (int)$row->absent_count;
+                $rate    = $checked > 0 ? round((int)$row->present_count / $checked * 100, 1) : null;
+                $avgPresent = (int)$row->date_count > 0
+                    ? round((int)$row->present_count / (int)$row->date_count, 1)
+                    : null;
+
+                return [
+                    'org_id'        => $row->org_id,
+                    'org_name'      => $row->parent_name
+                        ? $row->parent_name . ' > ' . $row->org_name
+                        : $row->org_name,
+                    'present_count' => (int)$row->present_count,
+                    'absent_count'  => (int)$row->absent_count,
+                    'member_count'  => (int)$row->member_count,
+                    'date_count'    => (int)$row->date_count,
+                    'avg_rate'      => $rate,
+                    'avg_present'   => $avgPresent,
+                ];
+            }, $rows);
+
+            return ApiResponse::success(['list' => $list]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[ReportService] getAttendanceStatsByOrg error: " . $e->getMessage(), "report");
+            return ApiResponse::fail('INTERNAL_ERROR', '조직별 출석 통계 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
+
     public function getOfferingStats(int $authMemberId, array $input): JsonResponse
     {
         try {

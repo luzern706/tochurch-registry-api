@@ -83,9 +83,10 @@ class OrganizationRequest extends FormRequest
     private function registerRules(): array
     {
         return [
-            'name'       => ['required', 'string', 'max:50'],
-            'parent_id'  => ['nullable', 'integer', 'min:1'],
-            'sort_order' => ['nullable', 'integer'],
+            'name'        => ['required', 'string', 'max:50'],
+            'description' => ['nullable', 'string', 'max:200'],
+            'parent_id'   => ['nullable', 'integer', 'min:1'],
+            'sort_order'  => ['nullable', 'integer'],
         ];
     }
 
@@ -94,6 +95,7 @@ class OrganizationRequest extends FormRequest
         return [
             'organization_id' => ['required', 'integer', 'min:1'],
             'name'            => ['sometimes', 'string', 'max:50'],
+            'description'     => ['sometimes', 'nullable', 'string', 'max:200'],
             'parent_id'       => ['sometimes', 'nullable', 'integer', 'min:1'],
             'sort_order'      => ['sometimes', 'integer'],
             'is_active'       => ['sometimes', 'boolean'],

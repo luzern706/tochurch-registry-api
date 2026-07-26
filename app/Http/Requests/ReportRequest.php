@@ -18,7 +18,8 @@ class ReportRequest extends FormRequest
     {
         return match ($this->route()?->getActionMethod()) {
             'getMemberStats'     => [],
-            'getAttendanceStats' => $this->dateRangeRules() + [
+            'getAttendanceStats', 'getAttendanceStatsByOrg',
+            'getStatsByService', 'getMemberRateDistribution' => $this->dateRangeRules() + [
                 'service_id'      => ['nullable', 'integer', 'min:1'],
                 'organization_id' => ['nullable', 'integer', 'min:1'],
             ],

@@ -7,7 +7,6 @@ use App\Helpers\ApiResponse;
 use App\Helpers\AuditLogHelper;
 use App\Helpers\JwtHelper;
 use App\Helpers\LogHelper;
-use App\Repositories\MemberRepository;
 use App\Repositories\OrganizationRepository;
 use App\Repositories\WorshipRepository;
 use Illuminate\Http\JsonResponse;
@@ -15,20 +14,17 @@ use Illuminate\Http\JsonResponse;
 class WorshipService
 {
     private const FILLABLE = [
-        'name', 'day_of_week', 'target_org_id', 'sort_order', 'is_active',
+        'name', 'description', 'note', 'category', 'day_of_week', 'start_time', 'target_org_id', 'sort_order', 'is_active',
     ];
 
     protected WorshipRepository $worshipRepository;
-    protected MemberRepository $memberRepository;
     protected OrganizationRepository $organizationRepository;
 
     public function __construct(
         WorshipRepository $worshipRepository,
-        MemberRepository $memberRepository,
         OrganizationRepository $organizationRepository
     ) {
         $this->worshipRepository      = $worshipRepository;
-        $this->memberRepository       = $memberRepository;
         $this->organizationRepository = $organizationRepository;
     }
 
@@ -85,6 +81,7 @@ class WorshipService
 
             $data = array_intersect_key($input, array_flip(self::FILLABLE));
             $data['church_id'] = $churchId;
+            $data['category']  = $data['category'] ?? 'regular';
             $data['is_active'] = $data['is_active'] ?? 1;
 
             $newId = $this->worshipRepository->insertWorship($data);

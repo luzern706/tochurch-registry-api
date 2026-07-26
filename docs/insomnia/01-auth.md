@@ -4,125 +4,154 @@ URL prefix: `{{ base_url }}/v4/auth`
 
 | # | 메서드 | URL | 인증 | 설명 |
 |---|---|---|---|---|
-| 1 | POST | `/v4/auth/signIn` | ❌ | 교인 로그인 (토큰 발급) |
-| 2 | POST | `/v4/auth/adminSignIn` | ❌ | 관리자 로그인 (gh_church_admin) |
-| 3 | POST | `/v4/auth/signOut` | ✅ | 로그아웃 (stateless, 클라이언트 토큰 폐기) |
+| 1 | POST | `/v4/auth/adminSignIn` | ❌ | 관리자 로그인 (토큰 발급) |
+| 2 | POST | `/v4/auth/signOut` | ✅ | 로그아웃 (stateless, 클라이언트 토큰 폐기) |
+
+> **교인 로그인 없음** — 교적 시스템은 관리자 전용. `gh_church_admin` 테이블 계정만 로그인 가능.
 
 ---
 
-## 1. POST `/v4/auth/signIn` — 교인 로그인
+## 1. POST `/v4/auth/adminSignIn` — 관리자 로그인
 
 **인증**: 불필요
 
-> **변경 사항 (2026-05-19)**: 응답에 `actor_type: "member"` 필드 추가.
-> JWT payload에 `churchId`, `actorType` 클레임이 포함됨.
-> **기존 토큰은 재로그인 필요** (churchId 클레임 없는 이전 토큰은 만료 전까지 API 호출 시 TOKEN_INVALID 반환).
+### 설명
+
+`gh_church_admin` 테이블 기준으로 인증.  
+로그인 성공 시 JWT 토큰 발급. 이후 모든 API 요청 헤더에 `Authorization: Bearer {token}` 포함.
 
 ### Request Body
+
 ```json
 {
-  "email": "test@example.com",
-  "password": "123456"
+  "login_id": "test111",
+  "password": "!q2w3e4r"
 }
 ```
 
+> dev DB 실제 시드 계정(church_no=33632) — 이전 예시(`admin01`/`adminpass1234`)는 실제 계정과 달랐음.
+
 **파라미터:**
-- `email` (string, required, max:100) — 로그인 이메일
-- `password` (string, required, max:255) — 비밀번호
+
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|:---:|---|
+| `login_id` | string | ✅ | 관리자 로그인 아이디 (max:100) |
+| `password` | string | ✅ | 비밀번호 — DB에 bcrypt 해시로 저장 (max:255) |
 
 ### Response — 성공 (200)
+
 ```json
 {
   "status": "success",
   "code": "",
   "message": "",
   "data": {
-    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-    "actor_type": "member",
-    "member_id": 1,
-    "member_no": "M-20260518-0001",
-    "name": "홍길동",
-    "email": "test@example.com",
-    "church_id": 1
+    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
   }
 }
 ```
 
-### Response — 실패
-- `INVALID_CREDENTIALS` (401) — 이메일/비밀번호 불일치
-- `VALIDATION_FAILED` (400) — 입력 형식 오류
-- `INTERNAL_ERROR` (500) — 서버 오류
+> **token 구조**: JWT(HS256 서명) + `data` 클레임만 AES-256-CBC로 암호화(sub/churchId/adminRole/name).
+> `churchName`은 암호화하지 않고 평문 최상위 클레임으로 별도 저장 — 여전히 JWT 서명 범위 안이라
+> 위변조는 불가능하지만(기밀성만 없음), Base64 디코딩만으로 바로 읽을 수 있다.
+> 상세 내용 → [`docs/token-auth.md`](../token-auth.md)
+>
+> **왜 churchName만 평문인가**: 사이드바 상단 교회명처럼 민감하지 않은 값은 프론트가 매번 서버에
+> 요청하지 않고 토큰에서 직접 꺼내 쓰도록 설계 — `AuthContext`가 로그인 시 토큰을 디코딩해
+> `churchName`을 `localStorage`에 저장해두고 이후 새로고침에도 재조회 없이 재사용(`registry_church_name` 키).
+> 응답 본문에는 `church_name`을 별도로 담지 않는다(토큰이 유일한 소스).
 
----
+**token 내부 payload (data 클레임 복호화 후 + 최상위 평문 클레임):**
 
-## 2. POST `/v4/auth/adminSignIn` — 관리자 로그인
-
-**인증**: 불필요
-
-> 교회 관리자 전용 로그인. `gh_church_admin` 테이블 기준으로 인증.
-> 교인 로그인(`signIn`)과 아이디가 중복될 수 있으므로 별도 엔드포인트로 분리.
-> 로그인 성공 후 발급된 토큰으로 모든 교적 API (v4/member, v4/attendance 등) 동일하게 호출 가능.
-
-### Request Body
-```json
-{
-  "login_id": "admin01",
-  "password": "adminpass"
-}
-```
-
-**파라미터:**
-- `login_id` (string, required, max:100) — gh_church_admin.id 값 (관리자 로그인 아이디)
-- `password` (string, required, max:255) — 비밀번호 (bcrypt 해시)
-
-### Response — 성공 (200)
-```json
-{
-  "status": "success",
-  "code": "",
-  "message": "",
-  "data": {
-    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-    "actor_type": "admin",
-    "admin_no": 10,
-    "login_id": "admin01",
-    "church_id": 1
-  }
-}
-```
+| 클레임 | 위치 | 설명 |
+|---|---|---|
+| `sub` | 암호화(`data`) | 관리자 번호 (`admin_no`) |
+| `churchId` | 암호화(`data`) | 교회 ID (`church_no`) |
+| `adminRole` | 암호화(`data`) | 역할 — `super` (슈퍼 관리자) \| `admin` (교회 관리자) |
+| `name` | 암호화(`data`) | 관리자 이름 |
+| `iat` | 암호화(`data`) | 발급 시각 (Unix timestamp) |
+| `ttl` | 암호화(`data`) | 유효 기간 (초, `.env JWT_TTL`) |
+| `churchName` | **평문(최상위)** | 교회명 (`gh_church.name`) — `atob()` 등으로 프론트에서 직접 읽을 수 있음 |
 
 ### Response — 실패
-- `INVALID_CREDENTIALS` (401) — 아이디/비밀번호 불일치 또는 상태 WAIT
-- `VALIDATION_FAILED` (400) — 입력 형식 오류
-- `INTERNAL_ERROR` (500) — 서버 오류
+
+| 코드 | HTTP | 원인 |
+|---|:---:|---|
+| `INVALID_CREDENTIALS` | 401 | 아이디/비밀번호 불일치 또는 status=WAIT |
+| `VALIDATION_FAILED` | 400 | 입력 형식 오류 |
+| `INTERNAL_ERROR` | 500 | 서버 오류 |
 
 ### 참고 — 관리자 계정 상태
-| status | 로그인 가능 |
-|---|---|
-| ALIVE | ✅ |
-| WAIT | ❌ (INVALID_CREDENTIALS 반환) |
+
+| status | 로그인 가능 | 설명 |
+|---|:---:|---|
+| `ALIVE` | ✅ | 정상 활성 계정 |
+| `WAIT` | ❌ | 비활성화(정지) — `INVALID_CREDENTIALS` 반환 |
+
+### 참고 — adminRole 별 권한
+
+| adminRole | 교적 관리 | 관리자 계정 관리 (`/v4/admin/*`) |
+|---|:---:|:---:|
+| `super` | ✅ | ✅ |
+| `admin` | ✅ | ❌ (403) |
 
 ---
 
-## 3. POST `/v4/auth/signOut` — 로그아웃
+## 2. POST `/v4/auth/signOut` — 로그아웃
 
 **인증**: 필요 (`Authorization: Bearer {token}`)
 
+### 설명
+
+JWT는 stateless 구조로 서버 측 토큰 폐기가 없음.  
+로그아웃은 감사 로그 기록 후 클라이언트가 저장된 토큰을 삭제하는 방식으로 처리.
+
 ### Request Body
+
 ```json
 {}
 ```
+
 (파라미터 없음)
 
 ### Response — 성공 (200)
+
 ```json
 {
   "status": "success",
   "code": "",
   "message": "",
-  "data": { "member_id": 1 }
+  "data": {
+    "admin_no": 10
+  }
 }
 ```
 
 ### Response — 실패
-- `TOKEN_INVALID` (401) — 토큰 없음/만료
+
+| 코드 | HTTP | 원인 |
+|---|:---:|---|
+| `TOKEN_INVALID` | 401 | 토큰 없음 / 만료 / 서명 불일치 |
+
+---
+
+## Insomnia 설정 참고
+
+### Environment Variables
+
+```json
+{
+  "base_url": "http://localhost:8000/api",
+  "token": ""
+}
+```
+
+### 로그인 후 token 저장 (After Response Script)
+
+```js
+const res = insomnia.response.getBody();
+const body = JSON.parse(res);
+if (body.status === 'success') {
+  insomnia.environment.set('token', body.data.token);
+}
+```

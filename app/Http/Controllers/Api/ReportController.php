@@ -36,6 +36,29 @@ class ReportController extends Controller
         return $this->reportService->getAttendanceStats($authMemberId, $request->validated());
     }
 
+    public function getStatsByService(ReportRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        return $this->reportService->getStatsByService($authMemberId, $request->validated());
+    }
+
+    public function getMemberRateDistribution(ReportRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        return $this->reportService->getMemberRateDistribution($authMemberId, $request->validated());
+    }
+
+    public function getAttendanceStatsByOrg(ReportRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->reportService->getAttendanceStatsByOrg($authMemberId, $request->validated());
+    }
+
     public function getOfferingStats(ReportRequest $request): JsonResponse
     {
         $authMemberId = JwtHelper::getAdminNoFromRequest($request);

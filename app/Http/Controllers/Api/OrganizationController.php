@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\OrganizationRequest;
 use App\Services\OrganizationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class OrganizationController extends Controller
 {
@@ -26,6 +27,16 @@ class OrganizationController extends Controller
         }
 
         return $this->organizationService->getOrganizationList($authMemberId, $request->validated());
+    }
+
+    public function getSidebarTree(Request $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+
+        return $this->organizationService->getSidebarTree();
     }
 
     public function getDetail(OrganizationRequest $request): JsonResponse

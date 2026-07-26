@@ -59,7 +59,21 @@
       "Bash(cd /d \"D:\\\\1101_free_pj\\\\04_tochurch\\\\00_pj_src\\\\03_git\\\\04_gh_registry_api\")",
       "Bash(php -l app/Helpers/JwtHelper.php)",
       "Bash(php -l app/Http/Requests/AdminSignInRequest.php)",
-      "PowerShell(cd \"D:\\\\1101_free_pj\\\\04_tochurch\\\\00_pj_src\\\\03_git\\\\04_gh_registry_api\"; $files = @\\(\"app/Helpers/JwtHelper.php\",\"app/Repositories/AuthRepository.php\",\"app/Services/AuthService.php\",\"app/Http/Controllers/Api/AuthController.php\",\"app/Http/Requests/AdminSignInRequest.php\",\"app/Services/MemberService.php\",\"app/Services/OrganizationService.php\",\"app/Services/FamilyService.php\",\"app/Services/WorshipService.php\",\"app/Services/AttendanceService.php\",\"app/Services/VisitService.php\",\"app/Services/VolunteerService.php\",\"app/Services/EducationService.php\",\"app/Services/OfferingService.php\",\"app/Services/MessageService.php\",\"app/Services/ReportService.php\"\\); foreach \\($f in $files\\) { php -l $f })"
+      "PowerShell(cd \"D:\\\\1101_free_pj\\\\04_tochurch\\\\00_pj_src\\\\03_git\\\\04_gh_registry_api\"; $files = @\\(\"app/Helpers/JwtHelper.php\",\"app/Repositories/AuthRepository.php\",\"app/Services/AuthService.php\",\"app/Http/Controllers/Api/AuthController.php\",\"app/Http/Requests/AdminSignInRequest.php\",\"app/Services/MemberService.php\",\"app/Services/OrganizationService.php\",\"app/Services/FamilyService.php\",\"app/Services/WorshipService.php\",\"app/Services/AttendanceService.php\",\"app/Services/VisitService.php\",\"app/Services/VolunteerService.php\",\"app/Services/EducationService.php\",\"app/Services/OfferingService.php\",\"app/Services/MessageService.php\",\"app/Services/ReportService.php\"\\); foreach \\($f in $files\\) { php -l $f })",
+      "Bash(dir /s /b \"D:\\\\1101_free_pj\\\\02_starlabs\\\\1001_git_aimie_client\\\\aimie_pregnant\\\\*.cs\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\50_ga_java\\\\04_cwpg_popup\\\\01_src_org\\\\cwpg_server_jdk18_transCash_naver\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(cmd /c \"tree /f /a D:\\\\50_ga_java\\\\04_cwpg_popup\\\\01_src_org\\\\cwpg_server_jdk18_transCash_naver 2>&1\")",
+      "PowerShell(Get-ChildItem -Recurse \"D:\\\\50_ga_java\\\\04_cwpg_popup\\\\01_src_org\\\\cwpg_server_jdk18_transCash_naver\" -File | Where-Object { $_.Extension -in @\\('.java','.jsp','.properties','.xml'\\) } | Select-Object FullName | Format-Table -AutoSize -Wrap)",
+      "PowerShell(\\(Get-Content \"D:\\\\50_ga_java\\\\04_cwpg-v2-renewal\\\\02_doc\\\\CWPG_ChannelCS_개발가이드.md\" -Encoding UTF8 | Select-Object -Last 60\\) -join \"`n\")",
+      "Bash(Get-ChildItem -Recurse -File \"D:\\\\50_ga_java\\\\04_cwpg-v2-renewal\\\\01_src\\\\cwpg-channelcs\\\\src\\\\main\\\\java\")",
+      "Bash(Sort-Object FullName)",
+      "Bash(Remove-Item \"D:\\\\1101_free_pj\\\\04_tochurch\\\\00_pj_src\\\\03_git\\\\04_gh_registry_api\\\\app\\\\Http\\\\Requests\\\\SignInRequest.php\" -Force)",
+      "Bash(mkdir -p \"D:\\\\1101_free_pj\\\\04_tochurch\\\\00_pj_src\\\\03_git\\\\03_gh_www_api\\\\docs\\\\schema\")",
+      "Bash(cd \"D:\\\\1101_free_pj\\\\04_tochurch\\\\00_pj_src\\\\03_git\\\\03_gh_www_api\" && find app -iname \"*board*\" -type f 2>/dev/null)",
+      "Bash(cd \"D:\\\\1101_free_pj\\\\04_tochurch\\\\00_pj_src\\\\03_git\\\\03_gh_www_api\" && find . -iname \"*.php\" -path \"*routes*\" 2>/dev/null; echo \"---\"; ls docs/schema 2>/dev/null)",
+      "Bash(cd \"D:\\\\1101_free_pj\\\\04_tochurch\\\\00_pj_src\\\\03_git\\\\03_gh_www_front_renewal\" && find . -maxdepth 3 -not -path '*/node_modules/*' -not -path '*/.git/*' | sort)"
     ]
   }
 }

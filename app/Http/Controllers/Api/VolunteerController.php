@@ -122,4 +122,57 @@ class VolunteerController extends Controller
         $validated = $request->validated();
         return $this->volunteerService->getTeamsByMember($authMemberId, (int) $validated['member_id']);
     }
+
+    public function getHistory(VolunteerRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->volunteerService->getHistory($authMemberId, $request->validated());
+    }
+
+    public function getTeamHistory(VolunteerRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->volunteerService->getTeamHistory($authMemberId, $request->validated());
+    }
+
+    // ─────────────── 봉사 출결 ───────────────
+
+    public function getAttendanceSheet(VolunteerRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->volunteerService->getAttendanceSheet($authMemberId, (int) $request->validated()['team_id']);
+    }
+
+    public function saveAttendance(VolunteerRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        $v = $request->validated();
+        return $this->volunteerService->saveAttendance(
+            $authMemberId,
+            (int) $v['team_id'],
+            $v['service_date'],
+            $v['records'],
+        );
+    }
+
+    public function getMemberAttendanceStats(VolunteerRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->volunteerService->getMemberAttendanceStats($authMemberId, (int) $request->validated()['team_id']);
+    }
 }

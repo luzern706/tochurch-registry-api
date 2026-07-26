@@ -19,12 +19,16 @@ class VisitRequest extends FormRequest
     public function rules(): array
     {
         return match ($this->route()?->getActionMethod()) {
-            'getList'   => $this->listRules(),
-            'getDetail' => $this->keyRules(),
-            'register'  => $this->registerRules(),
-            'update'    => $this->updateRules(),
-            'delete'    => $this->keyRules(),
-            default     => [],
+            'getList'      => $this->listRules(),
+            'getDetail'    => $this->keyRules(),
+            'register'     => $this->registerRules(),
+            'update'       => $this->updateRules(),
+            'updateStatus'      => $this->statusRules(),
+            'delete'            => $this->keyRules(),
+            'getUnvisitedList'      => $this->unvisitedRules(),
+            'bulkCompleteVisit'     => $this->bulkCompleteRules(),
+            'getAbsenceTargetList'  => $this->absenceTargetRules(),
+            default                 => [],
         };
     }
 
@@ -60,6 +64,9 @@ class VisitRequest extends FormRequest
             'member_id'         => ['nullable', 'integer', 'min:1'],
             'visitor_member_id' => ['nullable', 'integer', 'min:1'],
             'visit_type'        => ['nullable', 'string', 'in:' . implode(',', self::VISIT_TYPES)],
+            'event_reason'      => ['nullable', 'string', 'max:30'],
+            'org_ids'           => ['nullable', 'array'],
+            'org_ids.*'         => ['integer', 'min:1'],
             'from_date'         => ['nullable', 'date'],
             'to_date'           => ['nullable', 'date', 'after_or_equal:from_date'],
             'keyword'           => ['nullable', 'string', 'max:100'],
@@ -111,6 +118,50 @@ class VisitRequest extends FormRequest
             'common_note'       => ['sometimes', 'nullable', 'string'],
             'private_note'      => ['sometimes', 'nullable', 'string'],
             'add_to_prayer'     => ['sometimes', 'boolean'],
+        ];
+    }
+
+    private function bulkCompleteRules(): array
+    {
+        return [
+            'member_ids'   => ['required', 'array', 'min:1'],
+            'member_ids.*' => ['required', 'integer', 'min:1'],
+            'visit_date'   => ['nullable', 'date'],
+        ];
+    }
+
+    private function unvisitedRules(): array
+    {
+        return [
+            'year'       => ['nullable', 'integer', 'min:2000', 'max:2100'],
+            'org_ids'    => ['nullable', 'array'],
+            'org_ids.*'  => ['integer', 'min:1'],
+            'position'   => ['nullable', 'string', 'max:30'],
+            'att_status' => ['nullable', 'string', 'in:normal,irregular,absent'],
+            'keyword'    => ['nullable', 'string', 'max:100'],
+            'page'       => ['nullable', 'integer', 'min:1'],
+            'size'       => ['nullable', 'integer', 'min:1', 'max:100'],
+        ];
+    }
+
+    private function absenceTargetRules(): array
+    {
+        return [
+            'absence_weeks' => ['nullable', 'integer', 'min:1', 'max:52'],
+            'org_ids'       => ['nullable', 'array'],
+            'org_ids.*'     => ['integer', 'min:1'],
+            'keyword'       => ['nullable', 'string', 'max:100'],
+            'visit_status'  => ['nullable', 'string', 'in:unvisited,in_progress,completed'],
+            'page'          => ['nullable', 'integer', 'min:1'],
+            'size'          => ['nullable', 'integer', 'min:1', 'max:100'],
+        ];
+    }
+
+    private function statusRules(): array
+    {
+        return [
+            'visit_id' => ['required', 'integer', 'min:1'],
+            'status'   => ['required', 'string', 'in:scheduled,in_progress,completed,cancelled'],
         ];
     }
 

@@ -48,6 +48,13 @@ class AuditActionType
     /** 메시지 발송 */
     const SEND = 'SEND';
 
+    // ========== 계정 상태 ==========
+    /** 계정 정지 */
+    const SUSPEND = 'SUSPEND';
+
+    /** 계정 활성화 (정지 해제) */
+    const ACTIVATE = 'ACTIVATE';
+
     /**
      * 액션 타입의 한글 라벨 (관리자 화면 표시용)
      */
@@ -65,7 +72,31 @@ class AuditActionType
             self::WITHDRAW    => '수강취소',
             self::BULK_UPDATE => '일괄변경',
             self::SEND        => '발송',
+            self::SUSPEND     => '정지',
+            self::ACTIVATE    => '활성화',
         ];
         return $labels[$action] ?? $action;
+    }
+
+    /**
+     * 모든 액션 타입 목록 (검증/조회 옵션 등에 활용)
+     */
+    public static function all(): array
+    {
+        return [
+            self::LOGIN,
+            self::LOGOUT,
+            self::CREATE,
+            self::UPDATE,
+            self::DELETE,
+            self::ASSIGN,
+            self::UNASSIGN,
+            self::ENROLL,
+            self::WITHDRAW,
+            self::BULK_UPDATE,
+            self::SEND,
+            self::SUSPEND,
+            self::ACTIVATE,
+        ];
     }
 }

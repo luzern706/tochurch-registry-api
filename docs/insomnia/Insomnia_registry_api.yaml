@@ -1,0 +1,1004 @@
+type: collection.insomnia.rest/5.0
+schema_version: "5.1"
+name: church registry_api (교적관리)
+meta:
+  id: wrk_registry_001_main
+  created: 1749520000000
+  modified: 1750421000000
+  description: "교적관리 API 테스트 컬렉션 | base_url: http://127.0.0.1:8098/api"
+collection:
+  - name: 01. 인증 (Auth)
+    meta:
+      id: fld_registry_auth_001
+      created: 1749520000000
+      modified: 1750421000000
+      sortKey: -1000
+      description: "v4/auth — 관리자 로그인 / 로그아웃 (교인 로그인 없음)"
+    children:
+      - url: http://127.0.0.1:8098/api/v4/auth/adminSignIn
+        name: "[POST] 관리자 로그인 (adminSignIn)"
+        meta:
+          id: req_registry_auth_adminSignIn
+          created: 1749520002000
+          modified: 1750421001000
+          isPrivate: false
+          description: |
+            관리자 로그인 — gh_church_admin 테이블 기준 인증
+            응답: { token } 만 반환 (AES-256-CBC + JWT HS256 이중 암호화)
+            로그인 성공 시 last_login_at 자동 업데이트
+            admin_type: admin(관리자) / pastor(담임목회자) / minister(사역자) / volunteer(봉사자)
+            ※ ALIVE 상태 계정만 로그인 가능 (INACTIVE·DELETE 는 INVALID_CREDENTIALS 401)
+            ※ 받은 token 을 이후 모든 인증 요청의 Authorization 헤더에 입력
+          sortKey: -1000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "login_id": "admin01",
+              "password": "adminpass1234"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/auth/signOut
+        name: "[POST] 로그아웃 (signOut)"
+        meta:
+          id: req_registry_auth_signOut
+          created: 1749520003000
+          modified: 1750421002000
+          isPrivate: false
+          description: |
+            로그아웃 — stateless 처리 (서버에 토큰 블랙리스트 없음)
+            감사 로그(LOGOUT) 기록 후 admin_no 반환
+            클라이언트에서 저장된 토큰 삭제 책임
+            ※ Authorization 헤더 필수
+          sortKey: -2000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {}
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: 02. 관리자 계정 관리 (Admin)
+    meta:
+      id: fld_registry_admin_001
+      created: 1750420000000
+      modified: 1750421000000
+      sortKey: -2000
+      description: "v4/admin — admin 타입 전용 (jwt.auth + super.auth 미들웨어)"
+    children:
+      - url: http://127.0.0.1:8098/api/v4/admin/getList
+        name: "[POST] 관리자 목록 조회 (getList)"
+        meta:
+          id: req_registry_admin_getList
+          created: 1750420001000
+          modified: 1750421100000
+          isPrivate: false
+          description: |
+            소속 교회 관리자 목록 조회 (JWT churchId 로 자동 스코핑)
+            ALIVE · INACTIVE · DELETE 모든 상태 포함 출력
+            응답 필드: admin_no, id, name, status, admin_type, last_login_at, registered
+            [검색 조건 — 모두 선택사항]
+            search_type: 검색 컬럼 선택 — "id" | "name" (search_value 입력 시 필수)
+            search_value: 검색어 부분 일치 (search_type 선택 시 필수)
+            status: ALIVE | INACTIVE | DELETE (null 또는 생략 시 전체)
+            admin_type: admin | pastor | minister | volunteer (null 또는 생략 시 전체)
+            page, size 미입력 시 기본값: page=1, size=20
+          sortKey: -1000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "search_type": "name",
+              "search_value": "홍",
+              "status": null,
+              "admin_type": null,
+              "page": 1,
+              "size": 20
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/admin/getDetail
+        name: "[POST] 관리자 상세 조회 (getDetail)"
+        meta:
+          id: req_registry_admin_getDetail
+          created: 1750420002000
+          modified: 1750421002000
+          isPrivate: false
+          description: |
+            관리자 상세 조회 — 소속 교회 내 계정만 조회 가능
+            ※ DELETE 상태 계정은 조회 불가 (NOT_FOUND 404)
+            admin_no: 조회할 관리자 번호
+          sortKey: -2000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "admin_no": 1
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/admin/register
+        name: "[POST] 관리자 등록 (register)"
+        meta:
+          id: req_registry_admin_register
+          created: 1750420003000
+          modified: 1750421003000
+          isPrivate: false
+          description: |
+            교회 관리자 계정 등록 — 등록 즉시 ALIVE(활성) 상태
+            church_id 는 JWT 에서 자동 취득 (요청값 무시 — 타 교회 계정 생성 방지)
+            admin_type: admin(관리자) / pastor(담임목회자) / minister(사역자) / volunteer(봉사자)
+            password: 8자 이상, bcrypt 해시 저장
+            ※ 로그인 ID 중복 시 DUPLICATE_DATA(400) 반환
+          sortKey: -3000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "login_id": "admin02",
+              "name": "홍길동",
+              "password": "password1234",
+              "admin_type": "pastor"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/admin/update
+        name: "[POST] 관리자 수정 (update)"
+        meta:
+          id: req_registry_admin_update
+          created: 1750420004000
+          modified: 1750421004000
+          isPrivate: false
+          description: |
+            관리자 정보 수정 — 이름(name) / 비밀번호(password) / 권한(admin_type) 변경 가능
+            status 변경은 suspend / activate 엔드포인트 사용
+            수정할 항목이 없으면 VALIDATION_FAILED(400) 반환
+            ※ DELETE 상태 계정은 수정 불가 (NOT_FOUND 404)
+          sortKey: -4000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "admin_no": 2,
+              "name": "김철수",
+              "admin_type": "pastor"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/admin/suspend
+        name: "[POST] 관리자 비활성화 (suspend)"
+        meta:
+          id: req_registry_admin_suspend
+          created: 1750420005000
+          modified: 1750421005000
+          isPrivate: false
+          description: |
+            관리자 계정 비활성화 — status: INACTIVE 로 변경, 로그인 차단
+            ALIVE · DELETE 상태 모두 적용 가능 (DELETE → INACTIVE 복원 포함)
+            activate 로 활성화 복구 가능
+            ※ 자기 자신 비활성화 불가 (INSUFFICIENT_PERMISSION 403)
+            ※ 이미 INACTIVE 상태: DUPLICATE_DATA(400)
+          sortKey: -5000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "admin_no": 2
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/admin/activate
+        name: "[POST] 관리자 활성화 (activate)"
+        meta:
+          id: req_registry_admin_activate
+          created: 1750420006000
+          modified: 1750421006000
+          isPrivate: false
+          description: |
+            관리자 계정 활성화 — status: ALIVE 로 변경, 로그인 허용
+            INACTIVE · DELETE 상태 모두 적용 가능 (DELETE → ALIVE 복원 포함)
+            ※ 이미 ALIVE 상태: DUPLICATE_DATA(400)
+          sortKey: -6000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "admin_no": 2
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/admin/delete
+        name: "[POST] 관리자 삭제 (delete)"
+        meta:
+          id: req_registry_admin_delete
+          created: 1750420007000
+          modified: 1750421007000
+          isPrivate: false
+          description: |
+            관리자 계정 소프트 삭제 — status: DELETE 로 변경
+            목록(getList)에는 계속 표시됨 (status=DELETE 로 구분)
+            로그인 차단, 상세 조회(getDetail) 불가
+            activate / suspend 로 복원 가능
+            DB 실제 삭제는 purge 엔드포인트 사용
+            ※ 자기 자신 삭제 불가 (INSUFFICIENT_PERMISSION 403)
+            ※ 타 교회 관리자 삭제 불가 (NOT_FOUND 404)
+          sortKey: -7000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "admin_no": 2
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/admin/purge
+        name: "[POST] 관리자 영구삭제 (purge)"
+        meta:
+          id: req_registry_admin_purge
+          created: 1750420008000
+          modified: 1750421008000
+          isPrivate: false
+          description: |
+            관리자 계정 DB 실삭제 — status=DELETE 상태인 계정만 가능 (복구 불가)
+            delete 로 소프트 삭제 후 이 엔드포인트로 완전 제거
+            ※ DELETE 상태가 아니면 NOT_FOUND(404) 반환
+            ※ 자기 자신 삭제 불가 (INSUFFICIENT_PERMISSION 403)
+          sortKey: -8000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "admin_no": 2
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+  - name: 03. 봉사 (Volunteer)
+    meta:
+      id: fld_registry_volunteer_001
+      created: 1752650000000
+      modified: 1752651010000
+      sortKey: -3000
+      description: |
+        v4/volunteer — reg_service_teams(팀) + reg_service_members(참여자 매핑)
+        JOIN 쿼리 3종은 저장 프로시저 사용: sp_v4_reg_volunteer_by_team / teams_by_member / history
+        (docs/schema/05_sp_v4_reg_volunteer.sql)
+        테스트 데이터: docs/schema/104_seed_volunteer.sql (church_id=33632, 팀 8건 + 참여자 30건)
+    children:
+      - url: http://127.0.0.1:8098/api/v4/volunteer/getList
+        name: "[POST] 봉사 팀 목록 조회 (getList)"
+        meta:
+          id: req_registry_volunteer_getList
+          created: 1752650001000
+          modified: 1752651001000
+          isPrivate: false
+          description: |
+            봉사 팀 목록 조회 (페이징) — JWT churchId 로 자동 스코핑
+            [검색 조건 — 모두 선택사항]
+            service_type: 봉사 종류 필터 (worship/parking/dining/event/special 등, 자유 문자열)
+            mode: regular | onetime
+            is_active: true(사용) / false(종료)
+            manager_member_id: 담당자 교인 ID
+            keyword: 봉사명(name) · 설명(description) 부분 일치
+            page, size 미입력 시 기본값: page=1, size=20 (최대 100)
+          sortKey: -1000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "service_type": null,
+              "mode": null,
+              "is_active": true,
+              "manager_member_id": null,
+              "keyword": null,
+              "page": 1,
+              "size": 20
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/getDetail
+        name: "[POST] 봉사 팀 상세 조회 (getDetail)"
+        meta:
+          id: req_registry_volunteer_getDetail
+          created: 1752650002000
+          modified: 1752651002000
+          isPrivate: false
+          description: |
+            봉사 팀 상세 조회 — 소속 교회 팀만 조회 가능 (NOT_FOUND 404)
+            team_id: 조회할 봉사 팀 ID (필수)
+          sortKey: -2000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "team_id": 1
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/register
+        name: "[POST] 봉사 팀 등록 (register)"
+        meta:
+          id: req_registry_volunteer_register
+          created: 1752650003000
+          modified: 1752651003000
+          isPrivate: false
+          description: |
+            봉사 팀 등록 — church_id 는 JWT 에서 자동 취득
+            mode=regular 시: frequency(weekly/biweekly/monthly) · day_of_week(0~6) · service_time 사용
+            mode=onetime 시: event_date · start_time · end_time 사용
+            manager_member_id 지정 시 동일 교회 소속 교인인지 검증 (아니면 NOT_FOUND 404)
+            is_active 미입력 시 기본값 true
+            ※ name 만 필수, 그 외 전부 선택사항
+          sortKey: -3000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "name": "주일 주차 안내",
+              "description": "주일 예배 시간에 교회 주차장 안내를 도와주세요",
+              "service_type": "parking",
+              "mode": "regular",
+              "frequency": "weekly",
+              "day_of_week": 0,
+              "service_time": "08:30:00",
+              "required_count": 6,
+              "manager_member_id": 8,
+              "participation_type": "assignment",
+              "is_active": true
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/update
+        name: "[POST] 봉사 팀 수정 (update)"
+        meta:
+          id: req_registry_volunteer_update
+          created: 1752650004000
+          modified: 1752651004000
+          isPrivate: false
+          description: |
+            봉사 팀 수정 — team_id 필수, 그 외 필드는 전송한 항목만 반영(sometimes)
+            수정 전/후 값이 감사 로그(reg_audit_logs)에 diff 로 자동 기록됨
+            ※ 소속 교회 팀이 아니면 NOT_FOUND(404)
+          sortKey: -4000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "team_id": 1,
+              "required_count": 8,
+              "is_active": true
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/delete
+        name: "[POST] 봉사 팀 삭제 (delete)"
+        meta:
+          id: req_registry_volunteer_delete
+          created: 1752650005000
+          modified: 1752651005000
+          isPrivate: false
+          description: |
+            봉사 팀 소프트 삭제 — is_active: 0 으로 변경 (row 는 실제 삭제되지 않음)
+            getList 의 is_active 필터로 계속 조회 가능 (종료된 팀 이력 보존)
+            team_id: 삭제할 봉사 팀 ID (필수)
+          sortKey: -5000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "team_id": 8
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/assignVolunteer
+        name: "[POST] 봉사자 배정 (assignVolunteer)"
+        meta:
+          id: req_registry_volunteer_assignVolunteer
+          created: 1752650006000
+          modified: 1752651006000
+          isPrivate: false
+          description: |
+            봉사자 배정 — team_id + member_id 조합이 이미 있으면 UPDATE(UPSERT), 없으면 INSERT
+            team_id / member_id 모두 동일 교회 소속인지 검증 (아니면 NOT_FOUND 404)
+            status 미입력 시 기본값 active
+            role, joined_at 은 선택사항 — 재배정 시 값 덮어쓰기에도 사용 가능(역할 변경 등)
+          sortKey: -6000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "team_id": 1,
+              "member_id": 20,
+              "role": "안내",
+              "joined_at": "2026-07-20",
+              "status": "active"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/unassignVolunteer
+        name: "[POST] 봉사자 해제 (unassignVolunteer)"
+        meta:
+          id: req_registry_volunteer_unassignVolunteer
+          created: 1752650007000
+          modified: 1752651007000
+          isPrivate: false
+          description: |
+            봉사자 해제 — status: inactive 로 소프트 처리 (매핑 row 삭제하지 않음, 이력 보존)
+            team_id + member_id 매핑이 없으면 NOT_FOUND(404)
+          sortKey: -7000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "team_id": 1,
+              "member_id": 20
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/getVolunteersByTeam
+        name: "[POST] 팀 소속 봉사자 목록 (getVolunteersByTeam)"
+        meta:
+          id: req_registry_volunteer_getVolunteersByTeam
+          created: 1752650008000
+          modified: 1752651008000
+          isPrivate: false
+          description: |
+            SP(sp_v4_reg_volunteer_by_team) 기반 — reg_service_members + reg_members JOIN
+            team_id 필수, status/page/size 는 선택사항
+            시드 데이터 기준 team_id=1(주일 주차 안내) → 4명 활동중
+          sortKey: -8000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "team_id": 1,
+              "status": "active",
+              "page": 1,
+              "size": 20
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/getTeamsByMember
+        name: "[POST] 교인별 참여 팀 목록 (getTeamsByMember)"
+        meta:
+          id: req_registry_volunteer_getTeamsByMember
+          created: 1752650009000
+          modified: 1752651009000
+          isPrivate: false
+          description: |
+            SP(sp_v4_reg_volunteer_teams_by_member) 기반 — reg_service_members + reg_service_teams JOIN
+            member_id 필수, 페이징 없음 (한 교인의 전체 참여 이력을 한 번에 반환)
+            시드 데이터 기준 member_id=6 → 부활절 특송팀(active) + 주일학교 교사(inactive) 2건
+          sortKey: -9000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "member_id": 6
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/getHistory
+        name: "[POST] 교회 전체 봉사 이력 (getHistory)"
+        meta:
+          id: req_registry_volunteer_getHistory
+          created: 1752650010000
+          modified: 1752651010000
+          isPrivate: false
+          description: |
+            SP(sp_v4_reg_volunteer_history) 기반 — reg_service_members + reg_members + reg_service_teams 3-way JOIN
+            member_id / team_id 둘 다 생략하면 교회 전체 이력 반환 — 프론트 봉사이력 화면(교인 중심/봉사 중심 탭)의 기본 목록으로 사용
+            [검색 조건 — 모두 선택사항]
+            member_id: 특정 교인으로 좁힘
+            team_id: 특정 봉사 팀으로 좁힘
+            status: active | inactive
+            service_type: 봉사 종류 필터
+            keyword: 교인명 · 봉사명 부분 일치
+            시드 데이터 기준 필터 없이 호출 시 total=30
+          sortKey: -10000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "page": 1,
+              "size": 20
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/getTeamHistory
+        name: "[POST] 봉사 팀별 이력 요약 (getTeamHistory)"
+        meta:
+          id: req_registry_volunteer_getTeamHistory
+          created: 1752650011000
+          modified: 1752651011000
+          isPrivate: false
+          description: |
+            SP(sp_v4_reg_volunteer_team_history) 기반 — reg_service_teams + reg_service_members + reg_service_attendance 집계
+            team_id 생략하면 교회 전체 팀 반환 — 프론트 봉사이력 화면 "봉사 중심" 탭의 기본 목록으로 사용
+            [검색 조건 — 모두 선택사항]
+            team_id: 특정 봉사 팀으로 좁힘
+            service_type / mode: 봉사 종류 · 운영 형태 필터
+            keyword: 봉사명 부분 일치
+            from_date / to_date: 팀 최초 배정일 하한 / 최근 참여일 상한
+            시드 데이터 기준 필터 없이 호출 시 total=8
+          sortKey: -11000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "page": 1,
+              "size": 20
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/attendance/getSheet
+        name: "[POST] 봉사 출결 시트 조회 (attendance/getSheet)"
+        meta:
+          id: req_registry_volunteer_attendance_getSheet
+          created: 1752650012000
+          modified: 1752651012000
+          isPrivate: false
+          description: |
+            봉사 팀의 활동중 참여자 + 기록된 출결 데이터 조회 (체크인 화면용)
+            교육(v4/education/attendance/getSheet)과 달리 round_no 대신 실제 날짜(service_date)를 키로 사용
+            — 봉사 팀은 정기(무기한 반복)/일회성이라 고정된 회차 수가 없음
+            team_id: 조회할 봉사 팀 ID (필수)
+          sortKey: -12000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "team_id": 1
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/attendance/save
+        name: "[POST] 봉사 출결 저장 (attendance/save)"
+        meta:
+          id: req_registry_volunteer_attendance_save
+          created: 1752650013000
+          modified: 1752651013000
+          isPrivate: false
+          description: |
+            특정 날짜 출결 일괄 UPSERT — 이미 기록된 날짜를 다시 저장하면 상태가 덮어써짐
+            team_id / service_date 필수, records 배열 최소 1건
+            records[].status: present | absent | late | excused
+          sortKey: -13000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "team_id": 1,
+              "service_date": "2026-07-19",
+              "records": [
+                { "member_id": 16, "status": "present" },
+                { "member_id": 17, "status": "present" },
+                { "member_id": 18, "status": "absent" },
+                { "member_id": 19, "status": "late", "note": "5분 지각" }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+
+      - url: http://127.0.0.1:8098/api/v4/volunteer/attendance/getMemberStats
+        name: "[POST] 봉사 팀별 교인 출결 통계 (attendance/getMemberStats)"
+        meta:
+          id: req_registry_volunteer_attendance_getMemberStats
+          created: 1752650014000
+          modified: 1752651014000
+          isPrivate: false
+          description: |
+            팀별 교인 출결 통계 (present/absent/late/excused 카운트 + 최근 참여일)
+            team_id: 조회할 봉사 팀 ID (필수)
+          sortKey: -14000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "team_id": 1
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Accept
+            value: application/json
+          - name: Authorization
+            value: "Bearer 여기에_토큰_입력"
+          - name: User-Agent
+            value: insomnia/9.3.2
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true

@@ -27,6 +27,7 @@ class MemberRequest extends FormRequest
     public function rules(): array
     {
         return match ($this->route()?->getActionMethod()) {
+            'checkEmail' => ['email' => ['required', 'email', 'max:100']],
             'getList'   => $this->listRules(),
             'getDetail' => $this->detailRules(),
             'register'  => $this->registerRules(),
@@ -65,10 +66,14 @@ class MemberRequest extends FormRequest
     private function listRules(): array
     {
         return [
-            'keyword' => ['nullable', 'string', 'max:100'],
-            'status'  => ['nullable', 'in:active,inactive,unknown'],
-            'page'    => ['nullable', 'integer', 'min:1'],
-            'size'    => ['nullable', 'integer', 'min:1', 'max:100'],
+            'keyword'     => ['nullable', 'string', 'max:100'],
+            'search_type' => ['nullable', 'in:name,phone,email'],
+            'status'      => ['nullable', 'in:active,inactive,unknown'],
+            'sort_by'     => ['nullable', 'in:created_at,name,birth_date'],
+            'org_ids'     => ['nullable', 'array'],
+            'org_ids.*'   => ['integer', 'min:1'],
+            'page'        => ['nullable', 'integer', 'min:1'],
+            'size'        => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
     }
 

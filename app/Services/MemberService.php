@@ -84,6 +84,25 @@ class MemberService
         }
     }
 
+    public function checkEmail(int $authMemberId, array $input): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $isDuplicate = $this->memberRepository->existsByEmailInChurch($churchId, $input['email']);
+
+            return ApiResponse::success([
+                'available' => !$isDuplicate,
+            ]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[MemberService] checkEmail error: " . $e->getMessage(), "member");
+            return ApiResponse::fail('INTERNAL_ERROR', '이메일 확인 중 오류가 발생했습니다.', 500);
+        }
+    }
+
     public function registerMember(int $authMemberId, array $input): JsonResponse
     {
         try {

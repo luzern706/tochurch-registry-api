@@ -331,4 +331,118 @@ class VolunteerService
             return ApiResponse::fail('INTERNAL_ERROR', '교인 봉사 목록 조회 중 오류가 발생했습니다.', 500);
         }
     }
+
+    /** 교회 전체 봉사 이력 (교인/팀 미지정 시 전체 조회, 검색으로 좁힘) */
+    public function getHistory(int $authMemberId, array $filters): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $data = $this->volunteerRepository->getHistory($churchId, $filters);
+            return ApiResponse::success($data);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[VolunteerService] getHistory error: " . $e->getMessage(), "volunteer");
+            return ApiResponse::fail('INTERNAL_ERROR', '봉사 이력 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    /** 봉사 팀별 이력 요약 (봉사이력 화면 "봉사 중심" 탭) */
+    public function getTeamHistory(int $authMemberId, array $filters): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $data = $this->volunteerRepository->getTeamHistory($churchId, $filters);
+            return ApiResponse::success($data);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[VolunteerService] getTeamHistory error: " . $e->getMessage(), "volunteer");
+            return ApiResponse::fail('INTERNAL_ERROR', '봉사 팀 이력 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    // ─────────────── 봉사 출결 ───────────────
+
+    public function getAttendanceSheet(int $authMemberId, int $teamId): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $team = $this->volunteerRepository->getTeamById($teamId);
+            if ($team === null || (int) $team->church_id !== $churchId) {
+                return ApiResponse::fail('NOT_FOUND', '봉사 팀 정보를 찾을 수 없습니다.', 404);
+            }
+
+            return ApiResponse::success($this->volunteerRepository->getAttendanceSheet($teamId));
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[VolunteerService] getAttendanceSheet error: " . $e->getMessage(), "volunteer");
+            return ApiResponse::fail('INTERNAL_ERROR', '출결 시트 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    public function saveAttendance(int $authMemberId, int $teamId, string $serviceDate, array $records): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $team = $this->volunteerRepository->getTeamById($teamId);
+            if ($team === null || (int) $team->church_id !== $churchId) {
+                return ApiResponse::fail('NOT_FOUND', '봉사 팀 정보를 찾을 수 없습니다.', 404);
+            }
+
+            $this->volunteerRepository->saveAttendance($teamId, $serviceDate, $records);
+
+            AuditLogHelper::logAction(
+                memberId:    $authMemberId,
+                churchId:    $churchId,
+                menuCode:    AuditMenuCode::VOLUNTEER,
+                actionType:  AuditActionType::BULK_UPDATE,
+                summary:     "봉사 출결 저장: {$team->name} {$serviceDate} (" . count($records) . "명)",
+                targetId:    (string) $teamId,
+                targetLabel: $team->name,
+                detail:      ['service_date' => $serviceDate, 'count' => count($records)],
+            );
+
+            return ApiResponse::success([
+                'team_id'      => $teamId,
+                'service_date' => $serviceDate,
+                'saved'        => count($records),
+            ]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[VolunteerService] saveAttendance error: " . $e->getMessage(), "volunteer");
+            return ApiResponse::fail('INTERNAL_ERROR', '출결 저장 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    public function getMemberAttendanceStats(int $authMemberId, int $teamId): JsonResponse
+    {
+        try {
+            $churchId = JwtHelper::getChurchIdFromRequest();
+            if ($churchId === null) {
+                return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+            }
+
+            $team = $this->volunteerRepository->getTeamById($teamId);
+            if ($team === null || (int) $team->church_id !== $churchId) {
+                return ApiResponse::fail('NOT_FOUND', '봉사 팀 정보를 찾을 수 없습니다.', 404);
+            }
+
+            $list = $this->volunteerRepository->getMemberAttendanceStats($teamId);
+            return ApiResponse::success(['team_id' => $teamId, 'list' => $list]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[VolunteerService] getMemberAttendanceStats error: " . $e->getMessage(), "volunteer");
+            return ApiResponse::fail('INTERNAL_ERROR', '출석 통계 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
 }

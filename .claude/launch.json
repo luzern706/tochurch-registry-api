@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "windyzone-react-mock",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "D:/50_ga_java/03_auth_jeus/02_doc/1_mock/16_react_mock", "--", "--host"],
+      "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "www-api-dev",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["D:/1101_free_pj/04_tochurch/00_pj_src/03_git/03_gh_www_api/artisan", "serve", "--port=8055"],
+      "port": 8055
+    },
+    {
+      "name": "www-front-renewal-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/1101_free_pj/04_tochurch/00_pj_src/03_git/03_gh_www_front_renewal", "run", "dev", "--", "--port", "5196", "--strictPort"],
+      "port": 5196
+    }
+  ]
+}

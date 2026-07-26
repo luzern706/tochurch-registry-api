@@ -38,6 +38,32 @@ class OrganizationRepository
             ->toArray();
     }
 
+    /**
+     * 사이드바용 조직 트리 (flat, 활성만) — 조직별 소속 교인 수 포함
+     */
+    public function getSidebarTree(int $churchId): array
+    {
+        return DB::table('reg_organizations as o')
+            ->leftJoin('reg_member_organizations as mo', 'mo.organization_id', '=', 'o.id')
+            ->leftJoin('reg_members as m', function ($join) {
+                $join->on('m.id', '=', 'mo.member_id')
+                    ->where('m.is_deleted', 0);
+            })
+            ->where('o.church_id', $churchId)
+            ->where('o.is_active', 1)
+            ->groupBy('o.id', 'o.parent_id', 'o.name', 'o.sort_order')
+            ->orderBy('o.sort_order', 'asc')
+            ->orderBy('o.id', 'asc')
+            ->get([
+                'o.id',
+                'o.parent_id',
+                'o.name',
+                'o.sort_order',
+                DB::raw('COUNT(m.id) as member_count'),
+            ])
+            ->toArray();
+    }
+
     public function getOrganizationById(int $organizationId): ?stdClass
     {
         return DB::table('reg_organizations')

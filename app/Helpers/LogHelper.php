@@ -10,7 +10,7 @@ class LogHelper
         date_default_timezone_set('Asia/Seoul');
 
         $f_name = $log_name ? $log_name . "_" . date("Ymd") . ".log" : date("Ymd") . ".log";
-        $f_path = $_SERVER["DOCUMENT_ROOT"] . "/web_log/" . $f_name;
+        $f_path = storage_path("logs/web_log/" . $f_name);
 
         if (!file_exists(dirname($f_path))) {
             mkdir(dirname($f_path), 0777, true);
