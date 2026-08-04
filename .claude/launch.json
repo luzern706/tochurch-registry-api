@@ -19,6 +19,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "D:/1101_free_pj/04_tochurch/00_pj_src/03_git/03_gh_www_front_renewal", "run", "dev", "--", "--port", "5196", "--strictPort"],
       "port": 5196
+    },
+    {
+      "name": "admin-api-dev",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["D:/1101_free_pj/04_tochurch/00_pj_src/03_git/02_gh_admin_api/artisan", "serve", "--port=8197"],
+      "port": 8197
+    },
+    {
+      "name": "admin-front-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "D:/1101_free_pj/04_tochurch/00_pj_src/03_git/02_gh_admin_front", "run", "dev"],
+      "port": 8001
     }
   ]
 }
