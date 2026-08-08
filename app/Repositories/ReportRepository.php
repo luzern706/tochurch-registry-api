@@ -288,6 +288,23 @@ class ReportRepository
         return $query->groupBy('ym')->orderBy('ym', 'asc')->get()->toArray();
     }
 
+    // 월(ym) x 헌금항목(category) 교차표 — 기간별 조회 화면의 피벗 테이블용
+    public function getOfferingCategoryMonthlyPivot(int $churchId, string $fromDate, string $toDate): array
+    {
+        return DB::table('reg_offering_records')
+            ->select(
+                DB::raw('DATE_FORMAT(offer_date, "%Y-%m") as ym'),
+                'category',
+                DB::raw('SUM(amount) as total_amount')
+            )
+            ->where('church_id', $churchId)
+            ->whereBetween('offer_date', [$fromDate, $toDate])
+            ->groupBy('ym', 'category')
+            ->orderBy('ym', 'asc')
+            ->get()
+            ->toArray();
+    }
+
     // ─────────────── 심방 통계 ───────────────
 
     public function getVisitCount(int $churchId, string $fromDate, string $toDate, ?int $visitorMemberId): int

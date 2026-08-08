@@ -354,9 +354,9 @@ Request/Response 예시도 포함해줘."
 
 - [x] JWT 미들웨어 등록 (JwtAuthMiddleware)
 - [x] 인증 (로그인/로그아웃)
-- [x] 교인(Member) CRUD
+- [x] 교인(Member) CRUD (교인 상세 페이지 하위 5탭 — 심방/출석/교육/봉사/헌금 요약카드까지 2026-08-09 실연동 완료)
 - [x] 조직 관리
-- [x] 가족 관계
+- [x] 가족 관계 (등록/조회/삭제 + 관계 수정 UI까지 2026-08-09 완료, 반대편 레코드 자동 동기화)
 - [x] 출석 관리 (예배 정의 + 출석 기록 일괄 등록)
 - [x] 출석 통계 API (`getAttendanceStats`, `getAttendanceStatsByOrg`, `getStatsByService`, `getMemberRateDistribution`)
   - 출석현황 3탭 (개인별/기간별/조직별), 출석통계 (예배별/조직별/개인분포), 대시보드 실데이터 연결 완료
@@ -375,7 +375,7 @@ Request/Response 예시도 포함해줘."
 - [x] 봉사 관리
 - [x] 교육 관리
 - [x] 헌금 관리
-- [x] 메시지 발송 (발송 기록 저장 — 실제 게이트웨이 연동은 TODO)
+- [x] 메시지 발송 (발송 기록 저장 — 실제 게이트웨이 연동은 TODO) — 프론트 3화면(메시지 홈/작성/발송이력)도 2026-08-09 실연동 완료, 발송은 여전히 기록 저장까지만(SMS/Push/Email 게이트웨이 미연동)
 - [x] 보고서/통계
 - [x] 감사 로그 시스템 (write 액션 자동 기록, 관리자 V4 패턴)
 - [x] 관리자 로그인 (`POST /v4/auth/adminSignIn`, gh_church_admin 테이블, 별도 엔드포인트)
@@ -551,3 +551,70 @@ Request/Response 예시도 포함해줘."
     2. "전체"가 선택되지 않는 문제 + 상위/하위 조직도 선택 가능해야 함 — `openGroup`(드롭다운 펼침, 로컬 상태)과 `selectedOrgId`(선택된 조직, **URL의 `org_id` 쿼리 파라미터에서 직접 파생 — 별도 state 없음**)를 분리. "전체"/리프 조직/상위(토글) 조직/하위(중첩) 조직 전부 `/member/list?org_id=` 로 이동하는 `Link`로 통일, 선택 시 `li.active` 하이라이트(중첩 항목엔 CSS `ul li.active a` 규칙 신규 추가). URL 파생 방식을 택한 이유: 교인목록 페이지 자체의 "전체보기" 링크로 필터를 해제해도 사이드바 선택 표시가 자동으로 동기화됨(별도 동기화 로직 불필요)
     3. 조직 선택 시 교인목록에서 기본 조건(하위 조직 포함) + 페이지 자체 검색 조건과 AND — `MemberRepository::getMemberList`에 `org_ids` 필터 추가(Visit 계열 리포지토리와 동일한 `whereExists`+`reg_member_organizations` 패턴 재사용), `MemberRequest::listRules`에 검증 규칙 추가. `MemberList.jsx`가 `org_id` 쿼리 파라미터를 읽어 `OrganizationContext` 트리에서 해당 노드+전체 하위 id를 수집(`org_ids`)해 **`fetchList` 자체가 항상 병합**하도록 구현 — 검색/초기화/탭필터/정렬/페이지 이동 등 기존 모든 호출부를 개별 수정할 필요 없이 자동으로 AND 적용됨. "초기화" 버튼은 페이지 자체 검색 조건(키워드 등)만 초기화하고 조직 스코프는 유지(사이드바가 정한 컨텍스트이므로 페이지 검색폼 초기화 대상이 아니라고 판단). 조직 선택 시 안내 문구(`InfoCallout`, "OO 조직(하위 조직 포함) 기준으로 필터링되었습니다" + "전체보기" 링크) 추가
     4. 실측 검증(임시 8199/5199): 남전도회(16명, 부모 자체 직속 2명+제1남전도회 2명+제2남전도회 12명) 선택 → 총 16명, 여기에 키워드 "박" 추가 검색 → 총 2명(AND 확인) → "전체보기" 클릭 → 조직 스코프만 해제되고 키워드 "박"은 유지된 채 교회 전체 기준 재검색(총 3명, 두 필터가 독립적인 축임을 확인) → 하위 조직(제1남전도회)·리프 조직(청년부) 선택도 각각 배지 인원수와 실제 목록 건수 일치 확인
+- [x] 헌금 관리(`/finance/donation`)·헌금 입력(`/finance/donation/input`) 프론트 연동 — Session 12
+  - 발단: "페이지별 기능 현황을 확인해달라"는 요청으로 신규 작성된 `docs/06_페이지별_기능_현황.md`를 API 라우트·프론트 파일 양쪽에서 병렬 에이전트로 교차검증하던 중, 이 문서가 헌금관리/헌금입력을 ✅로 잘못 표기하고 있는 걸 발견(`offeringService.js` 자체가 없고 두 파일 다 순수 하드코딩) — 같은 유형의 오류가 종합통계/교회현황개요(`reportService.js` 없음)에도 있어 문서 정정 후, 사용자가 헌금 프론트 연동을 다음 작업으로 선택
+  - `offeringService.js`(getList/getDetail/getListByMember/register/update/delete) + `reportService.js`(getOfferingStats, 최초 파일) 신규 — report 도메인은 이번에 처음으로 서비스 파일이 생김(종합통계 등 나머지 report 화면은 여전히 미연동 상태로 남음, 별도 스코프)
+  - 실제 백엔드 스키마(`reg_offering_records`: member_id/offer_date/category/amount/method/ledger, "예배 연동"·"입력방식(개인별/총액/혼합)"·"상태(완료/보완가능)" 개념 없음)가 mock UI(예배 선택 필터, 상태 배지, 카테고리별 월별 피벗 테이블)와 크게 달라 UI를 실제 데이터 모델에 맞게 재설계 — 예배 필터 제거, 상태 배지 제거, 기간별 조회는 `ReportService::getOfferingStats`(이미 백엔드에 구현되어 있던 `monthly_trend`/`by_category` 집계)를 그대로 재사용해 월별 차트+항목별 비중표로 대체(신규 백엔드 로직 없음)
+  - `Donation.jsx` 3탭 전체 재작성: 전체내역(날짜/방식/키워드 필터 + 페이지네이션 + 수정모달 + 삭제, VisitHistory.jsx 페이징 패턴 재사용), 교인별 조회(`MemberSearchModal` 재사용), 기간별 조회(from/to 날짜 → `getOfferingStats`). PeriodDropdown 컴포넌트는 날짜 범위 계산 로직이 없는 표시 전용 mock이라(다른 화면에서도 실사용 예 없음) 채택하지 않고 다른 완료 화면들과 동일한 `<input type=date>` from/to 패턴으로 통일
+  - `DonationInput.jsx`: 교인명 자유 텍스트 입력 → `MemberSearchModal` 클릭 선택으로 교체(선택 안 하면 `member_id=null`, "무명 헌금"으로 저장 — mock의 "총액" 개념을 이렇게 대체). 원장(현금/은행명) 선택값으로 `method`(cash/transfer)를 자동 매핑. 블록(교인) × 행(항목) 각각을 `registerOffering` 개별 호출로 `Promise.all` 저장
+  - 브라우저 검증(로그인: test111/!q2w3e4r, `docs/insomnia/01-auth.md` 참고) 중 `computer` 툴의 클릭이 로그인 버튼/모달 내부 버튼에서 간헐적으로 React 이벤트를 못 태우는 문제 발견 — 로그인은 API 직접 fetch 후 토큰을 `localStorage`에 주입하는 방식으로 우회, 이후 폼 요소는 `type` 액션(실제 키보드 이벤트)이나 JS `element.click()` 직접 호출이 `computer.left_click`보다 안정적이었음(이 저장소 코드 문제 아님, 브라우저 자동화 툴 특성)
+  - 등록→목록조회(KPI/필터/페이지네이션)→교인별조회→기간별조회(차트+항목별표)→수정→삭제 전체 흐름을 실제 dev DB(church_id=33632, test111 계정)에서 검증 완료, 삭제까지 확인 후 테스트 데이터는 정리됨(레코드 0건으로 복귀)
+  - `docs/06_페이지별_기능_현황.md` 헌금관리/헌금입력 ✅로 갱신, `.claude/launch.json`에 `registry-api-dev`(8098)/`registry-front-dev`(5173) 신규 추가(이 저장소 자체 dev 서버 설정이 그동안 없었음 — 다른 5개 프로젝트 설정만 있던 공유 launch.json이었음)
+  - **후속 — 원본 mock UI 복원**: 사용자가 "처음 UI를 유지하면서 작업한거지?"라고 질문 → 위 1차 구현에서 예배 필터/상태 배지/기부금영수증 버튼/피벗 테이블 등을 실데이터 없다는 이유로 제거했던 것을 확인, "원래 mock을 유지하고 데이터 없는 부분만 표시, 스키마 변경 필요하면 정리해서 알려달라"는 요청으로 재작업
+    - `PeriodDropdown.jsx`: 하드코딩된 예시 날짜(`2026.02.04` 등) 대신 호출 시점 기준 실제 날짜로 빠른선택(오늘/이번주/이번달/올해/최근3·6개월) 범위를 계산하도록 수정, `onChange(period, label, {from,to})`로 실제 ISO 날짜 반환 — Donation.jsx 3탭 전부에서 재사용(전엔 아예 안 씀)
+    - `ReportRepository::getOfferingCategoryMonthlyPivot()`(월×항목 교차표) 신규 추가, `ReportService::getOfferingStats` 응답에 `pivot` 필드로 포함 — 스키마 변경 없이 기간별 조회의 피벗 테이블(원본엔 십일조/감사헌금/선교헌금/건축헌금/주일헌금 5개 고정 컬럼이었으나 실제 category는 자유입력이라 상위 5개 동적 구성)·보기방식(월별/연도별) 토글·년/월 선택을 전부 복원
+    - Donation.jsx AllTab: 예배 선택 select 복원(단, disabled + "(데이터 없음)" 라벨), 상태 컬럼 복원(값 대신 회색 "—" + 툴팁), 입력방식 배지는 `member_id` 유무로 개인별/총액만 derive("혼합"은 단일 레코드 grain에서 의미 없어 제외, 문서에 기록)
+    - MemberTab: 예배/비고 컬럼 복원("—" 표시), 기부금영수증 버튼 복원(disabled + "준비 중" 툴팁, 삭제하지 않음)
+    - DonationInput.jsx: 원본 "빠른 입력" 안내 문구 그대로 복원 + 미구현 부분(이름 자동완성)만 별도 경고 문구 추가, 헌금 항목→금액 Enter 이동, 금액에서 Enter 시 다음 교인 블록 자동 추가는 실제로 구현(원본 mock엔 있었지만 동작하지 않던 부분), 블록당 다항목 추가 버튼은 원본에 없던 것이라 제거(교인당 1항목 구조로 원복)
+    - `docs/schema/12_reg_offering_records_alter.md` 신규 — 예배연동(`service_id`)/비고(`note`)/정산상태(`status`) 3개 컬럼 추가 제안, 실행은 하지 않음(HeidiSQL에서 사용자가 직접 판단)
+    - 동일한 test111 계정으로 재검증(등록→목록 마킹 확인→기간별 월별/연도별 토글→교인별 조회→삭제) 완료
+  - **후속 — 65페이지 전수 재검증 + 문서 단일화**: 사용자가 "전체 다 재검증해줘" + "docs/06은 프론트 저장소에서만 관리하고 API 쪽 사본은 삭제"를 요청 — 인증/내정보/교인/출석, 심방/기도/교육, 봉사/메시지/교적설정, 재정 11개, 교회페이지/시스템설정/플랫폼 5개 그룹으로 나눠 병렬 에이전트 5개로 전 페이지 실코드(services import + 실제 호출 + 화면 데이터 출처) 재검증
+    - 추가로 잘못 ✅ 표기됐던 것 발견: **교인 홈**(`/member`, "리다이렉트"라 적혀있었으나 실제론 리다이렉트가 아니라 완전 하드코딩된 별도 대시보드 컴포넌트), **교인 상세/수정**(조회·상태변경·삭제만 실연동, 전체필드수정은 `memberService.js`에 `updateMember` 함수가 있는데도 미사용이라 저장 버튼 자체가 없음, 하위 탭들은 "모듈 연동됨" 뱃지가 붙어있지만 하드코딩), **가족관계**(백엔드 `FamilyController`/`v4/family/*`는 있으나 프론트에 `familyService.js` 자체가 없음), **메시지 홈/작성/발송이력**(3개 다 services import 자체가 없는 순수 정적 화면 — 백엔드 `MessageController`는 있음), **홈페이지 관리 홈**(`/management/website`, `WebsiteHome.jsx` 완성도 75% 등 전부 하드코딩)
+    - 버그성 발견(미연동이 아니라 "연동됐지만 고장남"): **교육 기수 출결**(`SessionAttendance.jsx`)이 회차별 출석/지각/결석 클릭값을 실제로 저장 안 함 — `educationService.js`에 이미 있는 `saveRoundAttendance()`를 import조차 안 하고, `handleSave`가 전원에게 동일한 `updateProgress` 진행률만 저장. 이건 이전 세션에 봉사 출결(`ServiceAttendance.jsx`) 구현 시 이미 "education 쪽 갭"으로 기록해뒀던 문제인데 education 자체는 그동안 고쳐지지 않고 방치돼 있었음. 교육 출석통계는 카테고리 검색 select 옵션이 하드코딩이라 실제 과정명과 다르면 필터만 안 먹는 경미한 부분연동
+    - 재검증 결과 최종: 66페이지 중 39개(59%) 실연동 확인 — 최초 doc06 작성본(65페이지 중 49개=75% 주장)보다 크게 낮음. 반대로 봉사(4)·심방(4)·기도(2)·교직설정·교회페이지 4종(교회소개/예배모임/소식공지/미디어)·시스템설정 4종은 전수 정확하게 ✅였음(과거 세션에서 실제로 검증하며 만든 기능들이라 신뢰도 높음)
+    - `docs/06_페이지별_기능_현황.md`를 04_gh_registry_front 저장소(`04_gh_registry_front/docs/06_페이지별_기능_현황.md`)로 단일화 — 이 API 저장소 쪽 사본은 삭제. 앞으로 이 문서는 프론트 저장소에서만 관리
+  - **후속 — 교인 상세 "기본정보" 수정 실연동**: 재검증에서 발견된 갭 중 사용자가 첫 번째로 지목 — `MemberDetail.jsx`의 `BasicTab`이 전부 비제어(`defaultValue`) input이라 저장 버튼 자체가 없던 걸 controlled form으로 전면 교체. 백엔드는 이미 준비되어 있었음(`MemberService::updateMember`가 `reg_members`/`reg_member_profiles` 화이트리스트 필드를 트랜잭션으로 함께 갱신, 스키마·컨트롤러 변경 없이 프론트 `updateMember(memberId, fields)` 호출만 추가하면 되는 구조 — `updateMemberStatus`도 이미 동일 엔드포인트를 부분 필드로 호출하는 방식이었음)
+    - 이름/성별/생년월일(양력·음력)/세대주/결혼상태/휴대전화/이메일/주소(다음 우편번호 API, `MemberRegister.jsx`의 `AddressSearchModal` 패턴 재사용)/직분(`POSITION_BADGE` 배지 재사용)/출석등급/교인구분/등록일/신급/메모 전부 저장 가능하도록 연동, 저장 성공 시 `onSaved` 콜백으로 부모(`MemberDetail`)의 `member`/`profile` state를 즉시 갱신해 상단 헤더(이름·배지)가 새로고침 없이 바로 반영되도록 함
+    - "배우자" 필드는 `reg_members`/`reg_member_profiles`에 대응 컬럼이 없고 가족관계 기능 자체가 아직 미구현이라(같은 재검증에서 발견된 별도 갭) 입력란·검색버튼을 비활성 처리하고 "준비 중" 툴팁만 추가 — 실데이터 없는 필드를 지우지 않고 표시만 하는 이번 세션의 헌금 화면 복원 때와 동일한 원칙 적용
+    - 하위 5개 탭(심방/출석/교육/봉사/헌금)은 이번 스코프에서 제외 — "○○ 모듈 연동됨" 뱃지가 붙어있지만 여전히 하드코딩 요약 카드이며, 각 데이터의 진짜 화면(심방현황/출석현황/교육이력/봉사이력/헌금관리)은 이미 별도로 실연동되어 있어 우선순위가 낮다고 판단
+    - 브라우저 검증(test111 계정, member_id=53 "봉미선"): 메모 수정 후 새로고침해도 값 유지 확인(진짜 저장 확인) → 이름 변경 시 페이지 새로고침 없이 상단 헤더 즉시 갱신 확인 → 테스트로 바꾼 이름/메모 원상복구
+    - `docs/06_페이지별_기능_현황.md` 교인 상세/수정 ✅로 갱신(단, 하위 탭은 별도 갭으로 명시)
+  - **후속 — 가족관계 실연동**: 사용자가 재검증 갭 중 두 번째로 선택. 백엔드 `FamilyController`/`FamilyService`/`FamilyRepository`는 이미 완성돼 있었음(양방향 자동 동기화 — 배우자↔배우자/부모↔자녀/형제자매↔형제자매/기타↔기타를 `REVERSE_RELATION` 매핑으로 등록·수정·삭제 시 항상 pair를 함께 처리) — 이번에도 프론트 서비스 파일 부재가 원인
+    - `FamilyRepository::getFamiliesByMember`에 `reg_member_profiles` LEFT JOIN 추가(스키마 변경 아님, 쿼리만 보강) — 원래 `related_name`/`gender`/`birth_date`만 반환하던 걸 `position`/`member_type`/`baptism_grade`/`workplace`까지 확장해 원본 mock 표의 9개 컬럼(관계/사진/이름/직분/교인구분/생년월일/신급/직장·학교/특이사항)을 전부 실데이터로 채울 수 있게 됨 — "일부는 데이터 없음 마킹" 없이 완전 구현
+    - `familyService.js` 신규(getFamilyList/registerFamily/updateFamily/deleteFamily)
+    - `MemberDetail.jsx`: 상세 조회와 별도로 가족 목록을 병렬 fetch(`fetchFamily`), `BasicTab`에 `family`/`onDeleteFamily` prop으로 전달. 가족 테이블 마지막 컬럼을 "가족 특이사항"(원본 유지) + "관리"(삭제 버튼, 신규 추가)로 구성
+    - `AddFamilyModal` 전면 재작성 — 원본은 하드코딩 2명(`FAMILY_CANDIDATES`)에 진짜 검색·저장 로직이 전혀 없었음. `memberService.getMemberList`로 실제 이름 검색(본인 + 이미 연결된 가족은 결과에서 제외), 원본의 체크박스 다중선택 UI는 유지하되 선택 시 공통 "가족 관계"(배우자/부모/자녀/형제자매/기타) select + "가족 특이사항" input이 나타나 한 번에 여러 명을 같은 관계로 일괄 등록 가능하도록 구성(예: 자녀 여러 명을 한 번에 등록)
+    - 관계 수정(update) API는 백엔드에 이미 있으나 이번 스코프에서 프론트 UI는 만들지 않음(삭제 후 재등록으로 대체 가능) — 우선순위상 등록/조회/삭제만 우선 구현
+    - 브라우저 검증(test111 계정): 봉미선(id=53)→김순희(id=14) "형제자매"로 등록 → 봉미선 쪽에 김순희 행 표시 확인 → 김순희 상세 페이지에서도 반대편에 "형제자매 - 봉미선"이 자동 생성된 것 확인(양방향 동기화 검증) → 삭제 시 양쪽 모두 사라지는 것까지 확인 후 정리
+    - `docs/06_페이지별_기능_현황.md` 가족관계 ✅로 갱신
+  - **후속 — 기수 출결(SessionAttendance) 버그 수정**: 65페이지 재검증 때 발견한 "API는 부르지만 저장 안 됨" 버그. 원인 3가지 모두 확인 후 수정 — (1) `handleSave`가 `educationService.js`에 이미 있던 `saveRoundAttendance()`를 import조차 안 하고 전원에게 동일한 `updateProgress` 진행률만 호출 → 실제로 `saveRoundAttendance(id, round, sessionDate, records)` 호출하도록 교체 (2) `totalRounds`가 `useState(8)` 고정값 → `getAttendanceSheet` 응답의 `total_rounds`로 대체(과정마다 2회~30회까지 실제로 다양했음, 하드코딩이었으면 짧은 과정은 없는 회차가 보이고 긴 과정은 회차가 잘렸을 것) (3) 회차 전환 시 이전 회차에 입력하던 값이 그대로 남아있던 문제 — `attendance`/`memo` state를 회차별 raw map(`rawAttendance`/`rawNotes`, `getAttendanceSheet`가 이미 `{member_id}_{round}` 키로 전체 회차를 한번에 내려줌)에서 파생시켜 회차가 바뀔 때마다 새로 계산하도록 구조 변경
+    - 저장 후 "진도율"(`updateProgress`)을 교인별로 다시 계산하도록 수정 — 기존엔 `현재회차/총회차`를 전원에게 동일 적용하는 게 잘못이었음(한 사람이 3회차를 결석해도 다른 사람과 같은 진도율이 찍힘). 이제는 사람별로 실제 기록된 회차 수(출석/지각/결석/공결 무관, 기록 자체가 있는 회차 수) ÷ 총회차로 계산 — "진도"는 참석 여부가 아니라 "그 회차가 이미 지나갔고 기록됐다"는 의미로 해석
+    - 부수 개선 2가지: 원본 UI엔 없었던 회차 날짜(`session_date`) 입력란 추가(저장 API가 필수는 아니지만 받는 파라미터라 의미있게 채움), "공결"(excused) 상태 옵션 추가(백엔드 enum엔 이미 present/absent/late/excused 4종이 있었는데 프론트 UI는 3종만 노출하고 있었음 — 공통 CSS(`.attendance-status-btn.excused`)는 이전에 봉사 출결 작업 때 이미 추가되어 있어 재사용만 하면 됐음)
+    - 메모(note) 저장은 되고 있었지만 조회 시 안 보이던 추가 버그 발견 — `EducationRepository::getAttendanceSheet`가 `reg_education_attendance`에서 `note` 컬럼까지 SELECT는 해놓고 반환 배열에는 `attendance`(status만) 맵만 만들고 `note`는 버리고 있었음 → `notes` 맵을 나란히 만들어 응답에 추가(스키마 변경 아님, 컨트롤러/서비스는 리포지토리 배열을 그대로 전달하는 구조라 추가 수정 불필요)
+    - 브라우저 검증(session_id=84 "큐티 학교" 8회차, 실제 수강생 3명): 1회차에 출석/지각/결석+메모 저장 → 2회차로 이동 시 비어있음(회차 분리 확인) → 새로고침 후 1회차 재방문 시 상태·메모·날짜 전부 유지 확인(진짜 저장 확인) → `getEnrollmentsBySession`으로 진도율이 3명 전부 13%(1/8회차)로 개별 계산된 것 확인. 이 세션 데이터는 삭제 API가 없어(upsert 전용) 시드 데이터에 남지만, 실사용과 동일한 유의미한 데이터라 정리하지 않음
+    - `docs/06_페이지별_기능_현황.md` 기수 출결 ✅로 갱신(⚠️ 제거)
+  - **후속 — 교인 상세 하위 5개 탭(심방/출석/교육/봉사/헌금) 실연동**: 65페이지 재검증에서 남은 3개 갭(메시지 3화면/하위 5탭/가족관계 수정 UI) 중 사용자가 두 번째로 선택. "○○ 모듈 연동됨" 뱃지만 붙어있던 하드코딩 요약 카드를, 각 도메인의 이미 실연동된 서비스 함수를 그대로 재사용해 해당 교인 기준으로 필터링한 요약으로 교체 — 신규 백엔드 변경 전혀 없음(순수 프론트 작업)
+    - 심방: `visitService.getVisitList({member_id, size:5})` — `VisitRepository::getVisitList`가 이미 `member_id` 필터를 지원했으나 프론트 어디서도 안 쓰고 있었음. 필드 매핑은 VisitHistory.jsx 화면 용어 그대로("심방자"=`visitor_name`, "담당자"=`manager_name`는 미표시, 심방유형은 `VISIT_TYPE_LABEL`로 annual→대심방/event→이벤트 매핑)
+    - 출석: `attendanceService.getListByMember(memberId, {from_date, to_date})` — 페이지네이션이 없는 API라 무제한 전체이력 방지 위해 최근 1년으로 범위 제한, 그 안에서 최근4주/최근1년 통계를 클라이언트에서 계산(원본 mock의 "연간 출석률"은 "최근 1년 출석률"로 라벨 정정 — 캘린더 연도가 아니라 조회 범위 기준임을 명확히 함)
+    - 교육: `educationService.getSessionsByMember(memberId)` — SP(`sp_v4_reg_edu_sessions_by_member`) 응답 전체(수강 이력 전부, 페이지네이션 없음)를 최근 5건만 슬라이스해 카드로 렌더링, `enrollment_status`(completed/withdrawn/기본값 수강중) 기준 배지
+    - 봉사: `volunteerService.getTeamsByMember(memberId)` — CLAUDE.md에 "사용처 미발견"으로 기록되어 있던 기존 미사용 함수를 여기서 첫 실사용. `reg_service_members.status` 기준 활동중/해제됨 배지
+    - 헌금: `offeringService.getOfferingsByMember(memberId, params)` 3회 병렬 호출(최근5건 size:5 / 올해 누계 from_date=올해1월1일 / 최근3개월 평균) — Repository가 페이지네이션과 무관하게 필터링된 전체 쿼리의 `total_amount`를 함께 반환하는 구조라 size:1로도 정확한 합계 확보 가능
+    - 버그 1건 발견·즉시 수정: 교육 카드 제목에 `{course_name} {generation}기`로 붙였다가 "큐티 학교 2026년 1기기"처럼 "기"가 중복 표시됨 — `generation` 필드 자체가 이미 "2026년 1기" 같은 자유 텍스트(History.jsx가 `기수없음` 리터럴도 함께 다루는 것으로 확인)라 접미사 없이 그대로 붙이도록 수정
+    - 브라우저 검증(8199/5173 임시 전환, test111 계정): 봉미선(id=53) — 심방 2건(이벤트, 실제 content/장소/심방자 표시)·출석 5건(최근4주 0건→"-" 정상, 최근1년 80%)·교육/봉사/헌금 빈 상태 정상 표시. 김정호(id=4) — 교육 5건(수강중 13%+수료 4건, 기수 표기 수정 후 재확인)·봉사 1건(비활성 팀, role null→"-" fallback) 확인. 헌금은 dev DB에 현재 레코드가 0건이라(이전 세션에 테스트 데이터 정리됨) 빈 상태만 검증됨. 콘솔 에러 없음
+    - 남은 갭 2개(메시지 3화면, 가족관계 "관계 수정" UI)는 이번 스코프 밖 — 다음 세션에서 사용자 지목 시 진행
+    - `docs/06_페이지별_기능_현황.md` 교인 상세/수정 행에서 "(기본정보만)" 단서 제거, 하위 5탭 실연동 내역 기록
+  - **후속 — 가족관계 "관계 수정" UI 추가**: 남은 갭 중 "가장 지켜야 할 원칙은 UI를 유지한 채 작업"이라는 재확인을 받은 뒤 사용자가 세 번째로 선택(메시지 3화면 대비 범위가 작고 기존 `AddFamilyModal` 패턴 재사용 가능해 추천). 백엔드 `v4/family/update`는 이미 있었고(관계 변경 시 반대편 레코드도 `REVERSE_RELATION` 매핑으로 자동 동기화하는 로직까지 기존에 구현되어 있었음), 프론트에만 진입점이 없었음
+    - 가족 목록 표의 "관리" 컬럼에 기존 "삭제" 버튼 옆에 "수정" 버튼 추가(`flex g5`로 나란히 배치), 클릭 시 `EditFamilyModal`(신규, `AddFamilyModal`과 동일한 `modal-box modal-md` 톤) 오픈 — 관계 선택(select)과 특이사항(input) 2개 필드만 다루는 작은 모달, `updateFamily(memberId, relatedMemberId, {relation_type, family_note})` 호출
+    - 원본 mock에는 애초 "관리" 컬럼 자체가 없었고(순수 정적 표), 지난 세션에 실 CRUD 구현하며 "삭제" 버튼을 위해 이미 한 번 확장된 컬럼이라 "수정" 버튼을 그 옆에 추가하는 것은 기존에 이미 만들어진 실용적 확장을 그대로 따르는 것으로 판단 — 레이아웃/문구를 새로 발명하지 않고 `AddFamilyModal`의 "가족 관계"+"가족 특이사항" 2단 레이아웃(`flex g15` + `flex-1` 2개)을 그대로 재사용. 컬럼 폭이 버튼 2개가 들어가기엔 좁아(`col width="60"`) `110`으로만 조정(자기 완결적 필요 최소 변경)
+    - 브라우저 검증(8199/5199 임시 포트 — 5173이 이 세션 중 다른 미지의 프로세스에 이미 점유되어 있어 5199로 대체, 등록된 launch.json도 임시로 `--port 5199 --strictPort` 추가 후 검증 후 원복): 실제 시드 데이터(봉미선 id=53 ↔ 김순희 id=14, "부모"-"자녀" 관계, 특이사항 "모")로 검증 — 수정 모달의 select/input이 기존 값("부모"/"모")으로 정확히 프리필됨 확인 → 특이사항을 "모(테스트수정)"으로 변경 저장 → 목록 즉시 갱신 확인 → 반대편(김순희 상세)에서도 "자녀" 관계 + 같은 특이사항으로 동기화된 것 확인(양방향 갱신 검증) → 원래 값 "모"로 되돌려 저장, 테스트 흔적 없이 정리 완료
+    - 이 세션 중 read_page 접근성 트리가 `AddressSearchModal`(닫힌 상태) 이후 컨텐츠를 못 읽는 현상 발견 — 원인 미상(포털 렌더링 순서 추정), get_page_text와 직접 DOM 쿼리(`document.querySelectorAll` + `.click()`)로 우회해 검증 진행. 페이지 자체의 `document.documentElement.scrollWidth`(1500)가 `window.innerWidth`(1280)보다 커 가로 스크롤이 있었으나, 가족관계 표(`.list-bottom`)는 컨테이너 폭(1248px)에 정확히 맞아떨어져 이번 컬럼 폭 조정이 원인이 아님을 확인(페이지의 다른 곳에 있는 기존 이슈로 추정, 이번 스코프 밖)
+    - `docs/06_페이지별_기능_현황.md` 가족관계 행에 `update` 엔드포인트/관계 수정 UI 내역 추가
+  - **후속 — 메시지 3화면(홈/작성/발송이력) 실연동**: 남은 마지막 갭. `messageService.js` 신규(getList/getDetail/send/delete) — 이 3화면은 서비스 파일이 아예 없었음
+    - 사전 조사로 백엔드-프론트 간극이 이전 갭들보다 훨씬 컸음을 확인: (1) `reg_messages`에 성공/실패 분리 집계, 발송 시 적용한 필터 조건 스냅샷, 제외 대상 목록, 예약 발송 시각이 전혀 저장되지 않음(스키마 자체에 컬럼 없음) — mock의 발송이력 상세 패널("적용한 필터 조건", "제외 목록", 성공/실패 별도 숫자)은 애초 백엔드가 절대 채울 수 없는 데이터였음 (2) mock의 필터 그룹 6종(교인구분/소그룹/출결·심방·교육·봉사 상태) 중 `getMemberList`가 실제로 지원하는 파라미터는 `org_ids` 하나뿐 — 나머지는 API 자체에 대응 파라미터가 없음 (3) 3개 페이지 사이에 선택 상태를 넘기는 메커니즘이 전무(각자 완전히 독립된 하드코딩 배열) — "메시지 작성으로" 버튼도, "검토 & 발송" 버튼도 실제로는 그냥 다음 페이지로 이동하는 링크였고 실제 발송 API 호출 자체가 어디에도 없었음(3단계 마법사가 이름만 있고 실제로 이어진 적이 없었음)
+    - 원칙(UI 유지, 스키마 변경 없이) 적용 방식을 사용자에게 사전 설명 없이 직접 판단해 진행: 데이터가 아예 없는 것(성공/실패 분리, 필터조건 스냅샷, 제외목록, 예약발송)은 섹션·라벨을 지우지 않고 "기록되지 않았습니다"/"- (미지원)" 문구로 대체, 예약발송 토글은 `disabled` 처리. 반대로 실제로 존재하지만 그동안 안 쓰이던 데이터(교인구분 `member_type`, 소속 조직명, 발송자 실명)는 최소한의 안전한 백엔드 추가로 채워 넣음
+    - 백엔드 추가 2건(둘 다 기존 쿼리에 컬럼만 보강, 스키마 변경 없음): `MemberRepository::getMemberList`에 대표 소속 조직(`VisitRepository`의 $orgSub 패턴 그대로 재사용) + `reg_member_profiles.member_type`을 SELECT에 추가 → 문자발송 수신자 표의 "소그룹"/"교인구분" 컬럼이 실데이터로 채워짐(다른 기존 화면들은 이 필드를 안 써서 영향 없음, MemberList.jsx로 회귀 확인). `MessageRepository`에 `gh_church_admin` LEFT JOIN(`AuditLogRepository`가 쓰던 것과 동일한 `a.admin_no = sent_by` 조인 패턴) 추가해 `sender_name` 필드 신설 → 발송이력의 "발송자"가 raw id 대신 실명으로 표시
+    - 3단계 마법사를 실제로 연결: `Messaging.jsx`에서 선택한 수신자(`{id,name,phone,org_name}`)를 `sessionStorage`에 담아 `Compose.jsx`로 전달(둘 사이에 공유 레이아웃/컨텍스트가 없어 라우트 쿼리 대신 sessionStorage 채택 — 인원이 많을 수 있어 URL엔 부적합). `Compose.jsx`는 마운트 시 stash가 없으면 안내 후 1단계로 자동 리다이렉트(직접 URL 진입 가드). "검토 & 발송" 버튼을 순수 링크에서 `window.confirm` 확인 후 `sendMessage({target_type:'members', member_ids, title, content, send_type:'sms'})` 실제 호출로 교체 — 성공 시 발송이력으로 이동(원래 버튼의 이동 목적지와 동일하게 유지)
+    - 검색 인풋 2곳(수신자 검색/발송이력 검색) 실제 keyword 파라미터로 연결(Enter 키 트리거, 다른 화면들과 동일 관례)
+    - 브라우저 검증(8199/5199 임시 포트, test111 계정): 수신자 선택(실제 교인 53명 중 연락처 있는 3명만 체크 가능, 나머지 50명은 "연락처 없음" 배지로 자동 비활성 — 이 dev DB엔 phone이 채워진 교인이 거의 없어 우연히 딱 맞는 케이스가 나옴) → 3명 선택 후 작성 페이지 이동 시 실제 이름/소그룹이 미리보기 3장에 정확히 반영 확인 → 발송 → 발송이력에 실시간 반영(발송자 "교적 관리자" 실명, 대상 3명, 상태 완료, 본문 원문 그대로) 확인. 테스트로 만든 메시지 레코드는 `deleteMessage` API로 정리(id=1, dev DB에 남아있던 유일한 레코드였음)
+    - `docs/06_페이지별_기능_현황.md` 메시지 3행 ✅ 전환 + 완료율 요약 합계 갱신(42→45), CLAUDE.md 최상단 "완료된 기능" 요약에 메시지 발송 항목이 이미 있었으나("메시지 발송(발송 기록 저장 — 실제 게이트웨이 연동은 TODO)") 이건 백엔드 API 관점 기록이라 그대로 유지, 프론트 실연동은 이번 항목으로 별도 기록
+    - 이번 갭 3개(메시지/교인상세하위탭/가족관계수정) 전부 완료 — 2026-08-08 재검증에서 발견된 갭 목록 소진

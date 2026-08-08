@@ -210,6 +210,7 @@ class ReportService
             $totals       = $this->reportRepository->getOfferingTotals($churchId, $fromDate, $toDate, $category);
             $byCategory   = $this->reportRepository->getOfferingByCategory($churchId, $fromDate, $toDate);
             $monthlyTrend = $this->reportRepository->getOfferingMonthlyTrend($churchId, $fromDate, $toDate, $category);
+            $pivot        = $this->reportRepository->getOfferingCategoryMonthlyPivot($churchId, $fromDate, $toDate);
 
             return ApiResponse::success([
                 'from_date'      => $fromDate,
@@ -219,6 +220,7 @@ class ReportService
                 'total_amount'   => $totals['total_amount'],
                 'by_category'    => $byCategory,
                 'monthly_trend'  => $monthlyTrend,
+                'pivot'          => $pivot,
             ]);
         } catch (\Exception $e) {
             LogHelper::logWrite("[ReportService] getOfferingStats error: " . $e->getMessage(), "report");

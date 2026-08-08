@@ -15,6 +15,7 @@ class FamilyRepository
     {
         return DB::table('reg_families as f')
             ->join('reg_members as m', 'm.id', '=', 'f.related_member_id')
+            ->leftJoin('reg_member_profiles as p', 'p.member_id', '=', 'm.id')
             ->where('f.member_id', $memberId)
             ->where('m.is_deleted', 0)
             ->orderBy('f.id', 'asc')
@@ -22,7 +23,9 @@ class FamilyRepository
                 'f.id', 'f.member_id', 'f.related_member_id', 'f.relation_type',
                 'f.family_note', 'f.created_at',
                 'm.member_no', 'm.name as related_name', 'm.gender as related_gender',
-                'm.birth_date as related_birth_date',
+                'm.birth_date as related_birth_date', 'm.profile_image as related_profile_image',
+                'p.position as related_position', 'p.member_type as related_member_type',
+                'p.baptism_grade as related_baptism_grade', 'p.workplace as related_workplace',
             ])
             ->toArray();
     }

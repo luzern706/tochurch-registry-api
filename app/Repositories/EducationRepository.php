@@ -256,16 +256,21 @@ class EducationRepository
             if ($r->session_date) $datemap[(int) $r->round_no] = $r->session_date;
         }
 
-        // 출결 맵 { "member_id_round_no" => status }
+        // 출결 맵 { "member_id_round_no" => status } / 메모 맵 { "member_id_round_no" => note }
         $attendance = [];
+        $notes      = [];
         foreach ($rows as $r) {
             $attendance["{$r->member_id}_{$r->round_no}"] = $r->status;
+            if ($r->note) {
+                $notes["{$r->member_id}_{$r->round_no}"] = $r->note;
+            }
         }
 
         return [
             'total_rounds' => $totalRounds,
             'members'      => $members,
             'attendance'   => $attendance,
+            'notes'        => $notes,
             'round_dates'  => $datemap,
         ];
     }

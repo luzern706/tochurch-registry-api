@@ -17,8 +17,15 @@ class MemberRepository
     {
         $m = 'reg_members';
 
+        // 교인당 대표 소속 1건만 가져오는 서브쿼리 (복수 소속 시 중복 행 방지, VisitRepository와 동일 패턴)
+        $orgSub = DB::table('reg_member_organizations')
+            ->select('member_id', DB::raw('MIN(organization_id) as organization_id'))
+            ->groupBy('member_id');
+
         $query = DB::table($m)
             ->leftJoin('reg_member_profiles as p', 'p.member_id', '=', "$m.id")
+            ->leftJoinSub($orgSub, 'mo', fn ($j) => $j->on('mo.member_id', '=', "$m.id"))
+            ->leftJoin('reg_organizations as org', 'org.id', '=', 'mo.organization_id')
             ->where("$m.church_id", $churchId)
             ->where("$m.is_deleted", 0);
 
@@ -78,7 +85,8 @@ class MemberRepository
                 "$m.birth_date", "$m.birth_type",
                 "$m.status", "$m.churchero_user_id",
                 "$m.address_main", "$m.created_at",
-                'p.position',
+                'p.position', 'p.member_type',
+                'org.name as org_name',
             ])
             ->toArray();
 

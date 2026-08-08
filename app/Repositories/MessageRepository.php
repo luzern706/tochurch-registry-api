@@ -7,25 +7,38 @@ use stdClass;
 
 class MessageRepository
 {
+    private const FIELDS = [
+        'm.id', 'm.church_id', 'm.title', 'm.content', 'm.send_type',
+        'm.sent_at', 'm.sent_by', 'm.recipient_count', 'm.created_at',
+        'a.name as sender_name',
+    ];
+
+    private function baseQuery()
+    {
+        return DB::table('reg_messages as m')
+            ->leftJoin('gh_church_admin as a', 'a.admin_no', '=', 'm.sent_by');
+    }
+
     public function getMessageList(int $churchId, array $filters): array
     {
-        $query = DB::table('reg_messages')
-            ->where('church_id', $churchId);
+        $query = $this->baseQuery()
+            ->where('m.church_id', $churchId);
 
         if (!empty($filters['send_type'])) {
-            $query->where('send_type', $filters['send_type']);
+            $query->where('m.send_type', $filters['send_type']);
         }
         if (!empty($filters['from_date'])) {
-            $query->where('sent_at', '>=', $filters['from_date']);
+            $query->where('m.sent_at', '>=', $filters['from_date']);
         }
         if (!empty($filters['to_date'])) {
-            $query->where('sent_at', '<=', $filters['to_date']);
+            $query->where('m.sent_at', '<=', $filters['to_date']);
         }
         if (!empty($filters['keyword'])) {
             $kw = '%' . $filters['keyword'] . '%';
             $query->where(function ($q) use ($kw) {
-                $q->where('title', 'LIKE', $kw)
-                  ->orWhere('content', 'LIKE', $kw);
+                $q->where('m.title', 'LIKE', $kw)
+                  ->orWhere('m.content', 'LIKE', $kw)
+                  ->orWhere('a.name', 'LIKE', $kw);
             });
         }
 
@@ -34,10 +47,10 @@ class MessageRepository
         $page = max(1, (int) ($filters['page'] ?? 1));
         $size = max(1, min(100, (int) ($filters['size'] ?? 20)));
 
-        $list = $query->orderBy('sent_at', 'desc')
-            ->orderBy('id', 'desc')
+        $list = $query->orderBy('m.sent_at', 'desc')
+            ->orderBy('m.id', 'desc')
             ->forPage($page, $size)
-            ->get()
+            ->get(self::FIELDS)
             ->toArray();
 
         return [
@@ -50,9 +63,9 @@ class MessageRepository
 
     public function getMessageById(int $messageId): ?stdClass
     {
-        return DB::table('reg_messages')
-            ->where('id', $messageId)
-            ->first();
+        return $this->baseQuery()
+            ->where('m.id', $messageId)
+            ->first(self::FIELDS);
     }
 
     public function insertMessage(array $data): int
