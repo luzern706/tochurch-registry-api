@@ -674,6 +674,12 @@ Request/Response 예시도 포함해줘."
     - `Compose.jsx`의 템플릿 드롭다운도 함께 연결 — 기존엔 컴포넌트 내부에 하드코딩된 `TPL`(4종 고정) 객체였던 것을 `getActiveTemplateList()`(비활성 제외, 공용+개인 통합) 실조회로 교체, 선택 시 `unsub_enabled`면 본문 끝에 `unsub_text`를 자동으로 붙여줌(템플릿 관리 화면에서 설정한 수신거부 문구가 실제 발송 문구에도 반영되도록)
     - **DB 미반영**: 이번엔 가입승인 때와 달리 사용자가 `AskUserQuestion`에서 "문서만, 실행은 직접 하시겠어요"를 선택 — 이 세션에서 `CREATE TABLE`을 실행하지 않았고, 따라서 브라우저 검증도 하지 않음(테이블이 없으면 `v4/message/template/*` 전 엔드포인트가 500). `docs/schema/11_reg_message_templates.sql`도 가입승인 파일 패턴을 그대로 복사해 쓰다가 "로컬 dev DB 적용 완료"라고 잘못 써놨던 걸 질문 답변 이후 발견해 "아직 미실행"으로 정정 — 스키마 제안 문서에 실행 여부를 기록할 땐 실제 실행한 직후에만 쓸 것(사전에 낙관적으로 쓰지 말 것)
     - PHP 5개 파일(`Repository`/`Service`/`Controller`/`Request`/`routes/api.php`) 전부 `php -l` 구문 검사 통과만 확인, 실제 API 호출·DB write는 미검증 상태. `docs/06_페이지별_기능_현황.md`는 이 상태를 정직하게 반영해 템플릿 행을 ✅로 올리지 않고 🚧로 유지한 채 "코드 구현 완료, DB 미적용" 상세 기록만 추가(합계 숫자 변경 없음), `TestLinks.jsx`도 false 그대로 둠 — `docs/schema/11_reg_message_templates.sql`을 HeidiSQL에서 실행하면 바로 동작하는 상태
+    - (참고) 테이블명 프리픽스 관련해 사용자가 "gh_ 프리픽스 + _v4 접미사"를 잠깐 지시했다가 곧바로 "reg_ 만 들어가면 되네"로 정정 — `reg_message_templates` 그대로 유지, 실제 파일 변경은 없었음(Repository의 테이블명을 바꿨다 되돌리기만 함)
+  - **후속 — 교인 홈(`/member`) 실연동**: 남은 마지막 "교인" 섹션 갭. `MemberHome.jsx`는 리다이렉트가 아니라 실제 대시보드 컴포넌트인데 services import 자체가 없이 KPI 4개가 전부 하드코딩(전체교인342/활동교인298/새가족5/가입대기3)이었음 — 신규 백엔드 변경 전혀 없이 기존 API 재사용만으로 완결(가장 작고 깔끔한 다음 항목이라 사용자에게 추천했고 그대로 선택됨)
+    - KPI 매핑: 전체교인=`getMemberStats().total`(부제 "최근 30일 +N명"=`recent_30d`), 활동교인=`by_status`에서 status='active' 건수(부제=참여율 active/total*100), 새가족=`by_member_type`에서 '새가족' 건수, 가입대기=`getJoinRequestList({size:1}).total`(원본 mock의 "/member/approvals 처리 →" 링크가 이미 정확히 그 기능을 가리키고 있었음 — 오늘 세션 초반에 구현한 가입 승인 기능과 그대로 연결)
+    - 첫 구현 시 실수 자체 발견·수정: "새가족" 카드 값도 `recent_30d`로 채웠다가, "전체 교인" 카드의 "▲ 최근 30일 +N명" 부제와 완전히 동일한 숫자가 두 카드에 중복 표시되는 걸 알아채 `by_member_type`(전체 등록 인원 중 현재 '새가족' 상태로 분류된 건수, 날짜 무관) 기준으로 교체 — 원본 mock 부제 "이번 달 등록"은 실제로는 날짜 필터가 아니라 상태 분류라 부정확한 라벨이었으므로 "전체 등록 인원 기준"으로 정직하게 조정
+    - 브라우저 검증(8199/5199 임시 포트, test111 계정): 전체교인 53명(최근 30일 +0명)·활동교인 53명(100.0% 참여율 — 이 dev DB 교인 전원이 active 상태)·새가족 1명·가입대기 2건(오늘 세션 초반 가입승인 기능 검증 때 만들었던 실제 대기 계정과 일치) 전부 실데이터로 렌더링 확인. API 2건(`getMemberStats`/`getJoinRequestList`) 200 OK, 콘솔 에러 없음(반복되는 `ERR_CONNECTION_REFUSED`는 기존에 무관한 노이즈로 판별된 것과 동일)
+    - `docs/06_페이지별_기능_현황.md` 교인 홈 ✅ 전환(전체 67 중 완료 51→52, 미구현 16→15 — **"교인" 섹션 6/6 전부 완료**), `TestLinks.jsx`도 true로 갱신
 
 
 
