@@ -79,6 +79,48 @@ class ReportRepository
             ->toArray();
     }
 
+    public function getMembersByMemberType(int $churchId): array
+    {
+        return DB::table('reg_members as m')
+            ->join('reg_member_profiles as p', 'p.member_id', '=', 'm.id')
+            ->select('p.member_type', DB::raw('COUNT(*) as count'))
+            ->where('m.church_id', $churchId)
+            ->where('m.is_deleted', 0)
+            ->groupBy('p.member_type')
+            ->orderBy('count', 'desc')
+            ->get()
+            ->toArray();
+    }
+
+    public function countRecentMembers(int $churchId, string $sinceDate): int
+    {
+        return DB::table('reg_members')
+            ->where('church_id', $churchId)
+            ->where('is_deleted', 0)
+            ->where('created_at', '>=', $sinceDate)
+            ->count();
+    }
+
+    public function countActiveVolunteers(int $churchId): int
+    {
+        return DB::table('reg_service_members as sm')
+            ->join('reg_service_teams as t', 't.id', '=', 'sm.service_team_id')
+            ->where('t.church_id', $churchId)
+            ->where('sm.status', 'active')
+            ->distinct()
+            ->count('sm.member_id');
+    }
+
+    public function countActiveEducationParticipants(int $churchId): int
+    {
+        return DB::table('reg_education_records as r')
+            ->join('reg_education_sessions as s', 's.id', '=', 'r.session_id')
+            ->where('s.church_id', $churchId)
+            ->where('r.status', 'ongoing')
+            ->distinct()
+            ->count('r.member_id');
+    }
+
     // ─────────────── 출석 통계 ───────────────
 
     public function getAttendanceCountByStatus(int $churchId, ?int $serviceId, string $fromDate, string $toDate, ?int $organizationId): array

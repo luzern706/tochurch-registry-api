@@ -40,6 +40,9 @@ class ReportService
                 'by_position'            => $this->reportRepository->getMembersByPosition($churchId),
                 'by_attendance_grade'    => $this->reportRepository->getMembersByAttendanceGrade($churchId),
                 'by_status'              => $this->reportRepository->getMembersByStatus($churchId),
+                'by_member_type'         => $this->reportRepository->getMembersByMemberType($churchId),
+                'recent_7d'              => $this->reportRepository->countRecentMembers($churchId, now()->subDays(7)->toDateString()),
+                'recent_30d'             => $this->reportRepository->countRecentMembers($churchId, now()->subDays(30)->toDateString()),
             ]);
         } catch (\Exception $e) {
             LogHelper::logWrite("[ReportService] getMemberStats error: " . $e->getMessage(), "report");
@@ -297,6 +300,10 @@ class ReportService
             // 이번 달 심방 건수
             $visitCount = $this->reportRepository->getVisitCount($churchId, $monthStart, $monthEnd, null);
 
+            // 이번 달 활동 봉사자 / 교육 참여자 (현재 스냅샷, 기간과 무관)
+            $activeVolunteers = $this->reportRepository->countActiveVolunteers($churchId);
+            $activeEducationParticipants = $this->reportRepository->countActiveEducationParticipants($churchId);
+
             return ApiResponse::success([
                 'as_of_date'         => $today,
                 'member_total'       => $memberTotal,
@@ -308,11 +315,13 @@ class ReportService
                     'absent_count'    => $absent,
                 ],
                 'this_month' => [
-                    'from'              => $monthStart,
-                    'to'                => $monthEnd,
-                    'offering_total'    => $offering['total_amount'],
-                    'offering_count'    => $offering['count'],
-                    'visit_count'       => $visitCount,
+                    'from'                          => $monthStart,
+                    'to'                            => $monthEnd,
+                    'offering_total'                => $offering['total_amount'],
+                    'offering_count'                => $offering['count'],
+                    'visit_count'                   => $visitCount,
+                    'active_volunteers'             => $activeVolunteers,
+                    'active_education_participants' => $activeEducationParticipants,
                 ],
             ]);
         } catch (\Exception $e) {
