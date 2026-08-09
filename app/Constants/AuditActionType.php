@@ -55,6 +55,13 @@ class AuditActionType
     /** 계정 활성화 (정지 해제) */
     const ACTIVATE = 'ACTIVATE';
 
+    // ========== 가입 연동 처리 ==========
+    /** 보류 (교적 연동 대기 목록에서 보류 처리) */
+    const HOLD = 'HOLD';
+
+    /** 반려 (교적 연동 대기 목록에서 반려 처리) */
+    const REJECT = 'REJECT';
+
     /**
      * 액션 타입의 한글 라벨 (관리자 화면 표시용)
      */
@@ -74,6 +81,8 @@ class AuditActionType
             self::SEND        => '발송',
             self::SUSPEND     => '정지',
             self::ACTIVATE    => '활성화',
+            self::HOLD        => '보류',
+            self::REJECT      => '반려',
         ];
         return $labels[$action] ?? $action;
     }
@@ -97,6 +106,8 @@ class AuditActionType
             self::SEND,
             self::SUSPEND,
             self::ACTIVATE,
+            self::HOLD,
+            self::REJECT,
         ];
     }
 }

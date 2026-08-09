@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\EducationController;
 use App\Http\Controllers\Api\FamilyController;
 use App\Http\Controllers\Api\IntroController;
 use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\Api\MemberJoinRequestController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\NewsController;
@@ -101,6 +102,11 @@ Route::prefix('v4/member')->middleware(['jwt.auth', 'permission:MEMBER'])->group
     Route::post('/register', [MemberController::class, 'register']);
     Route::post('/update',   [MemberController::class, 'update']);
     Route::post('/delete',   [MemberController::class, 'delete']);
+
+    // 가입 연동 대기(교회로 회원 → 교적 매칭/신규등록/보류/반려) — 연동/신규등록은 기존 update/register 재사용
+    Route::post('/getJoinRequestList', [MemberJoinRequestController::class, 'getJoinRequestList']);
+    Route::post('/holdJoinRequest',    [MemberJoinRequestController::class, 'holdJoinRequest']);
+    Route::post('/rejectJoinRequest',  [MemberJoinRequestController::class, 'rejectJoinRequest']);
 });
 
 // 조직 사이드바 트리 (좌측 메뉴 그룹 목록 — 전 역할 공통 노출, SETTING 권한과 무관)
