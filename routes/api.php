@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\MemberJoinRequestController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\MessageTemplateController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\OfferingController;
 use App\Http\Controllers\Api\OrganizationController;
@@ -294,6 +295,15 @@ Route::prefix('v4/message')->middleware(['jwt.auth', 'permission:MESSAGE'])->gro
     Route::post('/getDetail', [MessageController::class, 'getDetail']);
     Route::post('/send',   [MessageController::class, 'send']);
     Route::post('/delete', [MessageController::class, 'delete']);
+
+    // 문자 템플릿 (등록/수정/복제/사용여부, 발송화면 드롭다운은 getActiveList)
+    Route::post('/template/getList',       [MessageTemplateController::class, 'getList']);
+    Route::post('/template/getActiveList', [MessageTemplateController::class, 'getActiveList']);
+    Route::post('/template/getDetail',     [MessageTemplateController::class, 'getDetail']);
+    Route::post('/template/register',      [MessageTemplateController::class, 'register']);
+    Route::post('/template/update',        [MessageTemplateController::class, 'update']);
+    Route::post('/template/duplicate',     [MessageTemplateController::class, 'duplicate']);
+    Route::post('/template/toggleActive',  [MessageTemplateController::class, 'toggleActive']);
 });
 
 // 코드 관리 (GNB에 별도 메뉴 없음 — 교직설정 페이지 내부 각 기준 탭 — SETTING 권한 재사용)
