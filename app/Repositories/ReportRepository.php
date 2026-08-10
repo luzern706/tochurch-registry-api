@@ -296,6 +296,28 @@ class ReportRepository
         ];
     }
 
+    /** 전체 기간 누적 헌금 합계 (재정 대시보드 "현재 잔액" 근사 계산용) */
+    public function getOfferingCumulativeTotal(int $churchId): int
+    {
+        return (int) DB::table('reg_offering_records')
+            ->where('church_id', $churchId)
+            ->sum('amount');
+    }
+
+    /** 주차별 헌금 추이 (재정 통계 화면용) — fromDate 기준 7일 단위로 구간을 나눔 */
+    public function getOfferingWeeklyTrend(int $churchId, string $fromDate, string $toDate): array
+    {
+        return DB::table('reg_offering_records')
+            ->where('church_id', $churchId)
+            ->whereBetween('offer_date', [$fromDate, $toDate])
+            ->selectRaw('FLOOR(DATEDIFF(offer_date, ?) / 7) as week_idx, SUM(amount) as total_amount', [$fromDate])
+            ->groupBy('week_idx')
+            ->orderBy('week_idx', 'asc')
+            ->get()
+            ->map(fn ($r) => ['week_idx' => (int) $r->week_idx, 'total_amount' => (int) $r->total_amount])
+            ->toArray();
+    }
+
     public function getOfferingByCategory(int $churchId, string $fromDate, string $toDate): array
     {
         return DB::table('reg_offering_records')

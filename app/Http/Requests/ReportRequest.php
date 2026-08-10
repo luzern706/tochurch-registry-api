@@ -30,6 +30,8 @@ class ReportRequest extends FormRequest
                 'visitor_member_id' => ['nullable', 'integer', 'min:1'],
             ],
             'getDashboard'       => [],
+            'getFinanceDashboard' => [],
+            'getFinanceStats'    => $this->dateRangeRules(),
             default              => [],
         };
     }

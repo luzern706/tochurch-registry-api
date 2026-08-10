@@ -85,4 +85,22 @@ class ReportController extends Controller
         }
         return $this->reportService->getDashboard($authMemberId);
     }
+
+    public function getFinanceDashboard(ReportRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->reportService->getFinanceDashboard($authMemberId);
+    }
+
+    public function getFinanceStats(ReportRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        return $this->reportService->getFinanceStats($authMemberId, $request->validated());
+    }
 }

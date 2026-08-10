@@ -5,8 +5,10 @@ use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\CodeController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\ChurchProfileController;
 use App\Http\Controllers\Api\EducationController;
+use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\FamilyController;
 use App\Http\Controllers\Api\IntroController;
 use App\Http\Controllers\Api\MemberController;
@@ -289,6 +291,26 @@ Route::prefix('v4/offering')->middleware(['jwt.auth', 'permission:OFFERING'])->g
     Route::post('/delete',   [OfferingController::class, 'delete']);
 });
 
+// 지출 관리
+Route::prefix('v4/expense')->middleware(['jwt.auth', 'permission:EXPENSE'])->group(function () {
+    Route::post('/getList',           [ExpenseController::class, 'getList']);
+    Route::post('/getDetail',         [ExpenseController::class, 'getDetail']);
+    Route::post('/register',          [ExpenseController::class, 'register']);
+    Route::post('/update',            [ExpenseController::class, 'update']);
+    Route::post('/delete',            [ExpenseController::class, 'delete']);
+    Route::post('/getCategoryStats',  [ExpenseController::class, 'getCategoryStats']);
+    Route::post('/getReceiptStats',   [ExpenseController::class, 'getReceiptStats']);
+    Route::post('/uploadReceipt',     [ExpenseController::class, 'uploadReceipt']);
+});
+
+// 예산 관리
+Route::prefix('v4/budget')->middleware(['jwt.auth', 'permission:BUDGET'])->group(function () {
+    Route::post('/getStatus', [BudgetController::class, 'getStatus']);
+    Route::post('/register',  [BudgetController::class, 'register']);
+    Route::post('/update',    [BudgetController::class, 'update']);
+    Route::post('/delete',    [BudgetController::class, 'delete']);
+});
+
 // 메시지 발송 (실제 SMS/Push/Email 게이트웨이 연동 미구현)
 Route::prefix('v4/message')->middleware(['jwt.auth', 'permission:MESSAGE'])->group(function () {
     Route::post('/getList',   [MessageController::class, 'getList']);
@@ -330,4 +352,6 @@ Route::prefix('v4/report')->middleware(['jwt.auth', 'permission:REPORT'])->group
     Route::post('/getOfferingStats',   [ReportController::class, 'getOfferingStats']);
     Route::post('/getVisitStats',      [ReportController::class, 'getVisitStats']);
     Route::post('/getDashboard',       [ReportController::class, 'getDashboard']);
+    Route::post('/getFinanceDashboard', [ReportController::class, 'getFinanceDashboard']);
+    Route::post('/getFinanceStats',     [ReportController::class, 'getFinanceStats']);
 });
