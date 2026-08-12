@@ -9,14 +9,25 @@ class MessageRepository
 {
     private const FIELDS = [
         'm.id', 'm.church_id', 'm.title', 'm.content', 'm.send_type',
+        'm.deep_link', 'm.resend_of',
         'm.sent_at', 'm.sent_by', 'm.recipient_count', 'm.created_at',
         'a.name as sender_name',
+        'px.excluded_count',
     ];
 
+    /**
+     * push 발송 건에 한해 reg_push_recipients 에서 제외(도달불가) 인원수를 함께 붙여준다.
+     * sms 등 push 아닌 행은 관련 레코드가 없어 excluded_count = null.
+     */
     private function baseQuery()
     {
+        $excludedSub = DB::table('reg_push_recipients')
+            ->select('message_id', DB::raw('SUM(CASE WHEN reachable = 0 THEN 1 ELSE 0 END) as excluded_count'))
+            ->groupBy('message_id');
+
         return DB::table('reg_messages as m')
-            ->leftJoin('gh_church_admin as a', 'a.admin_no', '=', 'm.sent_by');
+            ->leftJoin('gh_church_admin as a', 'a.admin_no', '=', 'm.sent_by')
+            ->leftJoinSub($excludedSub, 'px', fn ($j) => $j->on('px.message_id', '=', 'm.id'));
     }
 
     public function getMessageList(int $churchId, array $filters): array
@@ -78,6 +89,18 @@ class MessageRepository
         return DB::table('reg_messages')
             ->where('id', $messageId)
             ->delete();
+    }
+
+    /**
+     * 이 메시지를 원본으로 하는 재발송 기록 목록 (푸시 상세 화면용)
+     */
+    public function getResendChildren(int $messageId): array
+    {
+        return DB::table('reg_messages')
+            ->where('resend_of', $messageId)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'title', 'sent_at'])
+            ->toArray();
     }
 
     /**

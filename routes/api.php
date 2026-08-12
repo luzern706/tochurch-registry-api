@@ -10,11 +10,16 @@ use App\Http\Controllers\Api\ChurchProfileController;
 use App\Http\Controllers\Api\EducationController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\FamilyController;
+use App\Http\Controllers\Api\FinanceAccountController;
+use App\Http\Controllers\Api\FinanceReportController;
+use App\Http\Controllers\Api\FinanceSettingController;
 use App\Http\Controllers\Api\IntroController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\MemberJoinRequestController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\MessageSettingController;
+use App\Http\Controllers\Api\PushNotificationController;
 use App\Http\Controllers\Api\MessageTemplateController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\OfferingController;
@@ -23,6 +28,7 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\PrayerController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\NoticeController;
 use App\Http\Controllers\Api\SystemController;
 use App\Http\Controllers\Api\VisitController;
 use App\Http\Controllers\Api\VolunteerController;
@@ -56,6 +62,13 @@ Route::prefix('v4/profile')->middleware('jwt.auth')->group(function () {
     Route::post('/getMyProfile',    [ProfileController::class, 'getMyProfile']);
     Route::post('/updateMyProfile', [ProfileController::class, 'updateMyProfile']);
     Route::post('/changePassword',  [ProfileController::class, 'changePassword']);
+});
+
+// 교회로 공지 센터 (읽기 전용) — 02_gh_admin_api가 작성한 gh_notice_v4*를 조회, 전 역할 공통 노출이라 jwt.auth만 요구
+Route::prefix('v4/notice')->middleware('jwt.auth')->group(function () {
+    Route::post('/getList',         [NoticeController::class, 'getList']);
+    Route::post('/getDetail',       [NoticeController::class, 'getDetail']);
+    Route::post('/getResourceList', [NoticeController::class, 'getResourceList']);
 });
 
 // 교회 기본정보 (설정 > 기본정보 — SETTING 권한 사용)
@@ -311,6 +324,31 @@ Route::prefix('v4/budget')->middleware(['jwt.auth', 'permission:BUDGET'])->group
     Route::post('/delete',    [BudgetController::class, 'delete']);
 });
 
+// 재정 보고서
+Route::prefix('v4/financeReport')->middleware(['jwt.auth', 'permission:FINANCE_REPORT'])->group(function () {
+    Route::post('/getMonthly', [FinanceReportController::class, 'getMonthly']);
+    Route::post('/getAnnual',  [FinanceReportController::class, 'getAnnual']);
+});
+
+// 재정 설정 (정책 값만 — 계정과목/초기이월금/결산·마감 실행/영수증 발행은 미구현)
+Route::prefix('v4/financeSetting')->middleware(['jwt.auth', 'permission:FINANCE_SETTING'])->group(function () {
+    Route::post('/getSettings',  [FinanceSettingController::class, 'getSettings']);
+    Route::post('/saveSettings', [FinanceSettingController::class, 'saveSettings']);
+    Route::post('/uploadSeal',   [FinanceSettingController::class, 'uploadSeal']);
+});
+
+// 재정 계좌관리 (설정 > 계좌관리) — 관리 자체는 FINANCE_SETTING 권한자만
+Route::prefix('v4/financeAccount')->middleware(['jwt.auth', 'permission:FINANCE_SETTING'])->group(function () {
+    Route::post('/getList',  [FinanceAccountController::class, 'getList']);
+    Route::post('/register', [FinanceAccountController::class, 'register']);
+    Route::post('/update',   [FinanceAccountController::class, 'update']);
+    Route::post('/delete',   [FinanceAccountController::class, 'delete']);
+});
+// 헌금·지출 입력 화면의 원장 드롭다운 — OFFERING/EXPENSE 권한자도 조회 가능해야 하므로 jwt.auth만 요구
+Route::prefix('v4/financeAccount')->middleware(['jwt.auth'])->group(function () {
+    Route::post('/getActiveList', [FinanceAccountController::class, 'getActiveList']);
+});
+
 // 메시지 발송 (실제 SMS/Push/Email 게이트웨이 연동 미구현)
 Route::prefix('v4/message')->middleware(['jwt.auth', 'permission:MESSAGE'])->group(function () {
     Route::post('/getList',   [MessageController::class, 'getList']);
@@ -326,6 +364,17 @@ Route::prefix('v4/message')->middleware(['jwt.auth', 'permission:MESSAGE'])->gro
     Route::post('/template/update',        [MessageTemplateController::class, 'update']);
     Route::post('/template/duplicate',     [MessageTemplateController::class, 'duplicate']);
     Route::post('/template/toggleActive',  [MessageTemplateController::class, 'toggleActive']);
+
+    // 문자 발송 설정 (업체/API키/발신번호/발송정책/수신거부 — 설정값만, 실제 게이트웨이 연동 미구현)
+    Route::post('/settings/getSettings',  [MessageSettingController::class, 'getSettings']);
+    Route::post('/settings/saveSettings', [MessageSettingController::class, 'saveSettings']);
+
+    // 푸시 알림 (실제 FCM 발송 인프라 없음 — 계정연동/기기토큰/수신동의 기반 도달가능성 계산 후 기록만 저장)
+    Route::post('/push/getFilterOptions', [PushNotificationController::class, 'getFilterOptions']);
+    Route::post('/push/getTargetSummary', [PushNotificationController::class, 'getTargetSummary']);
+    Route::post('/push/send',             [PushNotificationController::class, 'send']);
+    Route::post('/push/getDetail',        [PushNotificationController::class, 'getDetail']);
+    Route::post('/push/resend',           [PushNotificationController::class, 'resend']);
 });
 
 // 코드 관리 (GNB에 별도 메뉴 없음 — 교직설정 페이지 내부 각 기준 탭 — SETTING 권한 재사용)
