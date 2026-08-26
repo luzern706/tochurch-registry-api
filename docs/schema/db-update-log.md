@@ -71,7 +71,7 @@
 | [gh_church_alter.md](gh_church_alter.md) — ③ `gh_church_pastor.is_head`/`career` | 담임여부/약력 컬럼 | ✅ | ✅ | |
 | [gh_church_alter.md](gh_church_alter.md) — ④ `gh_church_timetable` 컬럼 추가(category/day_of_week/start_time/target_org_id/sort_order/is_active/description/note) | 예배 정의 구조화 | ✅ | ✅ | |
 | [gh_church_alter.md](gh_church_alter.md) — ⑤ `reg_services` → `gh_church_timetable` 데이터 이관 + `reg_attendance_records.service_id` 재매핑 | | ✅ | ✅ | 이관 자체는 양쪽 다 완료(`reg_attendance_records` 값 재매핑됨) |
-| [gh_church_alter.md](gh_church_alter.md) — ⑥ `reg_services` `DROP TABLE`(이관 확인 후 정리) | | ✅ (삭제됨) | 🔲 (테이블 남아있음) | dev에는 아직 미사용 상태로 남아있음 — 애플리케이션 코드가 더 이상 참조하지 않아 기능상 문제는 없으나, 정리하려면 dev에서도 `DROP TABLE reg_services;` 실행 필요 |
+| [gh_church_alter.md](gh_church_alter.md) — ⑥ `reg_services` `DROP TABLE`(이관 확인 후 정리) | | ✅ (삭제됨) | ✅ (2026-08-17 삭제) | dev도 FK/뷰/프로시저 참조 없음 확인 후 삭제 완료. `reg_attendance_records`에 `service_id=61`인 58건이 `reg_services`·`gh_church_timetable` 어디와도 매칭 안 되는 채로 남아있으나, 사용자 확인 결과 테스트 중 등록된 값이라 조치 불필요 |
 | [gh_church_alter.md](gh_church_alter.md) — ⑦ `gh_church_intro`(hero_title 등 8개 컬럼 + vision TEXT 확장) | 교회소개 필드 | ✅ | ✅ | |
 | [12_reg_offering_records_alter.md](12_reg_offering_records_alter.md) | `reg_offering_records`에 service_id/note/status 컬럼 제안 | 🔲 (의도적 미실행) | 🔲 (의도적 미실행) | 우선순위 낮아 제안만 하고 보류 중 — 화면은 해당 항목 "데이터 없음"으로 표시. 실행 대상 아님 |
 
