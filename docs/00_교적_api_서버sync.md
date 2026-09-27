@@ -10,7 +10,7 @@
 |---|---|
 | 도구 위치 | `D:\1101_free_pj\04_tochurch\00_pj_src\_export_tools` |
 | 프로젝트 이름 | `04_gh_registry_api` (`projects/04_gh_registry_api.json`) |
-| 정리본 저장소 | `D:\1101_free_pj\04_tochurch\00_pj_src\03_git\04_gh_registry_api_release` (원격 저장소 없음. 첫 sync 기준: 작업 저장소 `757c64e`, 정리본은 아직 커밋 전) |
+| 정리본 저장소 | `D:\1101_free_pj\04_tochurch\00_pj_src\03_git\04_gh_registry_api_release` (`main` 브랜치, 원격 저장소 없음. 첫 커밋 `6048629` — 작업 저장소 `a2c3d99` 기준) |
 | 로그 | `_export_out/04_gh_registry_api.log` (sync 1회당 1줄), 빌드 전체 출력은 `_export_out/04_gh_registry_api.build.log` |
 | 필요 환경 | Node.js, PHP 8.1 이상, Composer — 셋 다 PATH에 있어야 함 (`node -v`, `php -v`, `composer -V`로 확인). PHP가 다른 경로면 환경 변수 `PHP_BIN` |
 
