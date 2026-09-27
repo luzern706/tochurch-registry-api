@@ -1,9 +1,12 @@
 # 교적 관리 API — 로컬 테스트 및 AWS 배포 가이드
 
-> 최종 수정: 2026-07-23 (서비스용 디렉토리 구조 추가)  
+> 최종 수정: 2026-09-27 (서버 업로드를 소스 정리본 저장소 기준으로 변경)  
 > 스택: Laravel 10 / PHP 8.1 / MariaDB 10.11 / Apache (VirtualHost)  
 > 데모 배포 경로: `/var/www/gh_registry_api/v_1` , `/var/www/gh_registry_api/v_2`  
 > 서비스 배포 경로: `/var/www/gh_registry/api/v_1` , `/var/www/gh_registry/api/v_2`
+
+> **서버에는 정리본 저장소(`04_gh_registry_api_release`)의 파일을 올린다.** 작업 저장소 커밋을 주석 제거 정리본에 반영하는 절차는 [`00_교적_api_서버sync.md`](00_교적_api_서버sync.md) 참고 (배포 전 커밋 → sync → 정리본 커밋 → 정리본 폴더에서 업로드).  
+> 로컬 개발·테스트(2~4번)는 지금처럼 작업 저장소에서 한다. DB 변경은 마이그레이션 없이 `docs/schema/*.sql`을 HeidiSQL에서 직접 실행하므로, 새 SQL 파일이 있으면 API 업로드 전에 대상 DB에 먼저 적용한다.
 
 ---
 
@@ -185,7 +188,23 @@ drwxr-xr-x.  front/
 
 ## 6. SFTP 업로드 목록
 
-SFTP로 직접 업로드할 파일/폴더 목록입니다.
+SFTP로 직접 업로드할 파일/폴더 목록입니다. **정리본 폴더**(`D:\1101_free_pj\04_tochurch\00_pj_src\03_git\04_gh_registry_api_release`)에서 올리며, 작업 저장소에서 올리지 않습니다.
+
+업로드 전에 정리본을 최신 커밋에 맞춥니다.
+
+```powershell
+# 1. 작업 저장소 커밋 후 sync (결과: PASS 확인)
+cd D:\1101_free_pj\04_tochurch\00_pj_src\_export_tools
+node bin/sync.js sync -p 04_gh_registry_api
+
+# 2. 정리본 커밋 (변경이 있을 때만 — "추가 0 / 수정 0 / 삭제 0"이면 생략)
+cd D:\1101_free_pj\04_tochurch\00_pj_src\03_git\04_gh_registry_api_release
+git diff --stat
+git add -A
+git commit -m "<작업 저장소 커밋과 같은 요지의 메시지>"
+```
+
+> sync 검증 중에 정리본 폴더에 `vendor/`가 생기지만 업로드하지 않습니다(아래 제외 목록). `.env.example`은 정리본의 템플릿 파일입니다.
 
 ### ✅ 업로드할 것
 
@@ -384,9 +403,13 @@ sudo chmod -R 775 /var/www/gh_registry/api/v_2/bootstrap/cache
 
 ### 8-4. 업데이트 배포 순서
 
+> 1번 업로드 전에 작업 저장소 커밋 → sync → 정리본 커밋을 먼저 한다([6번](#6-sftp-업로드-목록)).
+>
+> ⚠️ **`config:cache` 주의:** [`00_교적_api_서버sync.md`](00_교적_api_서버sync.md) 4번에 따르면 `GeocodeHelper`(카카오 키)와 `S3FileHelper`(AWS 키·리전)가 `env()`를 직접 호출하고 있어, `php artisan config:cache` 후에는 이 값들이 null이 된다(주소 좌표 변환·S3 업로드 실패). 해당 코드를 `config()`로 옮기기 전까지는 아래 `config:cache` 실행 여부를 서버 상태에 맞게 판단한다.
+
 **데모용:**
 ```bash
-# 1. 현재 대기 버전에 소스 업로드 (SFTP)
+# 1. 정리본 폴더(04_gh_registry_api_release)에서 현재 대기 버전에 소스 업로드 (SFTP)
 #    현재 v_1 운영 중이면 → v_2 에 업로드
 
 # 2. 대기 버전에서 composer, 캐시 작업
@@ -409,7 +432,7 @@ sudo systemctl reload httpd   # restart 아닌 reload — 무중단
 
 **서비스용:**
 ```bash
-# 1. 현재 대기 버전에 소스 업로드 (SFTP)
+# 1. 정리본 폴더(04_gh_registry_api_release)에서 현재 대기 버전에 소스 업로드 (SFTP)
 #    현재 v_1 운영 중이면 → v_2 에 업로드
 
 # 2. 대기 버전에서 composer, 캐시 작업
@@ -755,6 +778,17 @@ tail -f /etc/httpd/logs/gh_registry-api_7003_access.log
 ---
 
 ## 빠른 배포 명령어 요약
+
+### 업로드 전 (로컬)
+
+```bash
+# 작업 저장소 커밋 후
+cd D:/1101_free_pj/04_tochurch/00_pj_src/_export_tools
+node bin/sync.js sync -p 04_gh_registry_api   # 결과: PASS 확인
+cd ../03_git/04_gh_registry_api_release
+git diff --stat && git add -A && git commit -m "<메시지>"   # 변경이 있을 때만
+# → 이 정리본 폴더의 파일을 SFTP로 업로드 (6번 목록)
+```
 
 ### 데모용
 
