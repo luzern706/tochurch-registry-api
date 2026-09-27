@@ -38,6 +38,15 @@ class MessageSettingService
         'message_unsub_mode',
     ];
 
+    /**
+     * 타사 SMS 서비스 인증 정보 — 조회 응답에 원문을 내려주지 않는다(설정 여부만 `{키}_set` 으로 반환).
+     * 저장 시 빈 값이면 기존 값을 유지한다(화면은 저장된 값을 모르므로, 변경할 때만 입력).
+     */
+    public const SECRET_KEYS = [
+        'message_sms_api_key',
+        'message_sms_api_secret',
+    ];
+
     protected SettingRepository $settingRepository;
 
     public function __construct(SettingRepository $settingRepository)
@@ -59,6 +68,11 @@ class MessageSettingService
                 $map[$row->setting_key] = $row->setting_value;
             }
 
+            foreach (self::SECRET_KEYS as $secretKey) {
+                $map[$secretKey . '_set'] = $map[$secretKey] !== null && $map[$secretKey] !== '';
+                $map[$secretKey] = null;
+            }
+
             return ApiResponse::success(['settings' => $map]);
         } catch (\Exception $e) {
             LogHelper::logWrite("[MessageSettingService] getSettings error: " . $e->getMessage(), "message_setting");
@@ -75,6 +89,11 @@ class MessageSettingService
             }
 
             $allowed = array_intersect_key($settings, array_flip(self::KEYS));
+            foreach (self::SECRET_KEYS as $secretKey) {
+                if (array_key_exists($secretKey, $allowed) && ($allowed[$secretKey] === null || $allowed[$secretKey] === '')) {
+                    unset($allowed[$secretKey]);
+                }
+            }
             foreach ($allowed as $key => $value) {
                 $this->settingRepository->upsert($churchId, $key, $value);
             }
