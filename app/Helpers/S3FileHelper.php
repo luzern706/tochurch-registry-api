@@ -99,10 +99,10 @@ class S3FileHelper
     {
         return new \Aws\S3\S3Client([
             'version'     => 'latest',
-            'region'      => env('AWS_DEFAULT_REGION'),
+            'region'      => config('filesystems.disks.s3.region'),
             'credentials' => [
-                'key'    => env('AWS_ACCESS_KEY_ID'),
-                'secret' => env('AWS_SECRET_ACCESS_KEY'),
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
             ],
             'scheme'      => 'http',
         ]);

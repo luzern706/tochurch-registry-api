@@ -87,7 +87,7 @@ sync가 자동으로 하는 일:
    3. `php artisan route:list`: 라우트 수 확인 (`bin/php-check.js routes`, 현재 221개: api 216, web 5)
    4. `php artisan route:cache` / `view:cache`: 라우트·Blade 캐시 생성 확인 후 바로 `route:clear` / `view:clear`
    - `DB_HOST`/`REDIS_HOST`를 닿지 않는 주소로 덮어쓴 상태로 실행하므로 **DB에 접속하지 않는다**(`build.env`).
-   - `config:cache`는 실행하지 않는다. 코드에 `env()` 직접 호출이 남아 있어서다(4번 참고).
+   - `config:cache`는 검증 단계에서 실행하지 않는다(서버 배포 시 배포 가이드대로 실행). `app/`의 `env()` 직접 호출은 2026-09-27에 `config()`로 옮겨서 서버에서 `config:cache`를 써도 된다(4번 참고).
    - `vendor/`, `bootstrap/cache/*.php`, `storage/logs/`가 생기지만 `.gitignore` 대상이고 서버에도 올리지 않는다.
 4. **흔적 검사**: TODO/레거시/다른 저장소 이름/로컬 경로/이메일/사설 IP/AI 도구 이름/토큰(FCM·JWT·API 키)/`.env` 값 등이 정리본 파일에 남았는지
 5. `_export_out/04_gh_registry_api.log`에 결과 한 줄 기록 (커밋은 하지 않음)
@@ -130,7 +130,7 @@ sync가 자동으로 하는 일:
 
 같은 날 `app/Services/MemberService.php`의 전화번호 마스킹 설명 주석에 들어 있던 휴대폰 번호 예시를 가상 번호(`010-1234-5678`)로 바꿨다. 주석이라 정리본에는 원래 들어가지 않았지만, 작업 저장소 이력에는 남아 있다.
 
-> 새 코드에서도 DB 이름·버킷·도메인·토큰 같은 환경 값과 실제 전화번호·이메일은 SQL이나 코드(주석 포함)에 직접 쓰지 말고 `config()`로 읽거나 가상 값을 쓴다. 현재 `GeocodeHelper`(카카오 키)와 `S3FileHelper`(AWS 키·리전)가 `env()`를 직접 부르고 있어서, 서버에서 `config:cache`를 쓰면 이 값들이 null이 된다.
+> 새 코드에서도 DB 이름·버킷·도메인·토큰 같은 환경 값과 실제 전화번호·이메일은 SQL이나 코드(주석 포함)에 직접 쓰지 말고 `config()`로 읽거나 가상 값을 쓴다. `env()`를 `app/` 코드에서 직접 부르면 서버에서 `config:cache` 후 null이 된다. 2026-09-27에 `GeocodeHelper`(카카오 키 → `config('services.kakao.rest_api_key')`)와 `S3FileHelper`(AWS 키·리전 → `config('filesystems.disks.s3.*')`)를 옮겼고, `config:cache` 상태에서 값 조회·좌표 변환이 되는 것을 확인했다.
 
 ---
 

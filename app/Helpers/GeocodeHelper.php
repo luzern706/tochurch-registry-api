@@ -22,7 +22,7 @@ class GeocodeHelper
         }
 
         try {
-            $kakaoApiKey = env('KAKAO_REST_API_KEY');
+            $kakaoApiKey = config('services.kakao.rest_api_key');
             if (!$kakaoApiKey) {
                 LogHelper::logWrite("[GeocodeHelper] Kakao API Key is missing. (.env에 KAKAO_REST_API_KEY 설정 필요)", 'common');
                 return $result;

@@ -405,7 +405,7 @@ sudo chmod -R 775 /var/www/gh_registry/api/v_2/bootstrap/cache
 
 > 1번 업로드 전에 작업 저장소 커밋 → sync → 정리본 커밋을 먼저 한다([6번](#6-sftp-업로드-목록)).
 >
-> ⚠️ **`config:cache` 주의:** [`00_교적_api_서버sync.md`](00_교적_api_서버sync.md) 4번에 따르면 `GeocodeHelper`(카카오 키)와 `S3FileHelper`(AWS 키·리전)가 `env()`를 직접 호출하고 있어, `php artisan config:cache` 후에는 이 값들이 null이 된다(주소 좌표 변환·S3 업로드 실패). 해당 코드를 `config()`로 옮기기 전까지는 아래 `config:cache` 실행 여부를 서버 상태에 맞게 판단한다.
+> **`config:cache` 사용 가능:** `app/` 코드는 환경 값을 `config()`로만 읽는다(2026-09-27 `GeocodeHelper`·`S3FileHelper` 수정). 새 코드에서 `env()`를 직접 부르면 `config:cache` 후 null이 되므로 `config/*.php`에 키를 추가하고 `config()`로 읽는다.
 
 **데모용:**
 ```bash
