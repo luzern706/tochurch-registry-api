@@ -20,6 +20,7 @@ class MemberJoinRequestRequest extends FormRequest
             'getJoinRequestList' => $this->listRules(),
             'holdJoinRequest'    => $this->statusRules(),
             'rejectJoinRequest'  => $this->statusRules(),
+            'approveInviteJoin'  => ['account_no' => ['required', 'integer', 'min:1']],
             default              => [],
         };
     }

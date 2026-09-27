@@ -47,4 +47,14 @@ class MemberJoinRequestController extends Controller
 
         return $this->service->reject($authMemberId, $request->validated());
     }
+
+    public function approveInviteJoin(MemberJoinRequestRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+
+        return $this->service->approveInvite($authMemberId, $request->validated());
+    }
 }

@@ -112,7 +112,9 @@ Route::prefix('v4/permission')->middleware(['jwt.auth'])->group(function () {
 
 // 교인 CRUD
 Route::prefix('v4/member')->middleware(['jwt.auth', 'permission:MEMBER'])->group(function () {
-    Route::post('/checkEmail', [MemberController::class, 'checkEmail']);
+    Route::post('/checkDuplicate',     [MemberController::class, 'checkDuplicate']);
+    Route::post('/sendInvite',         [MemberController::class, 'sendInvite']);
+    Route::post('/uploadProfileImage', [MemberController::class, 'uploadProfileImage']);
     Route::post('/getList',    [MemberController::class, 'getList']);
     Route::post('/getDetail',  [MemberController::class, 'getDetail']);
     Route::post('/register', [MemberController::class, 'register']);
@@ -123,6 +125,7 @@ Route::prefix('v4/member')->middleware(['jwt.auth', 'permission:MEMBER'])->group
     Route::post('/getJoinRequestList', [MemberJoinRequestController::class, 'getJoinRequestList']);
     Route::post('/holdJoinRequest',    [MemberJoinRequestController::class, 'holdJoinRequest']);
     Route::post('/rejectJoinRequest',  [MemberJoinRequestController::class, 'rejectJoinRequest']);
+    Route::post('/approveInviteJoin',  [MemberJoinRequestController::class, 'approveInviteJoin']); // 초대 링크 가입 → 초대 교적 연결(관리자 확인)
 });
 
 // 조직 사이드바 트리 (좌측 메뉴 그룹 목록 — 전 역할 공통 노출, SETTING 권한과 무관)
@@ -378,6 +381,11 @@ Route::prefix('v4/message')->middleware(['jwt.auth', 'permission:MESSAGE'])->gro
 });
 
 // 코드 관리 (GNB에 별도 메뉴 없음 — 교직설정 페이지 내부 각 기준 탭 — SETTING 권한 재사용)
+// 코드 드롭다운 조회 전용 (교인 등록 등 입력 화면용 — SETTING 권한 없는 역할도 코드 목록은 읽을 수 있어야 함)
+Route::prefix('v4/code')->middleware(['jwt.auth'])->group(function () {
+    Route::post('/getOptions', [CodeController::class, 'getCodes']);
+});
+
 Route::prefix('v4/code')->middleware(['jwt.auth', 'permission:SETTING'])->group(function () {
     Route::post('/getCodes', [CodeController::class, 'getCodes']);
     Route::post('/registerCode', [CodeController::class, 'registerCode']);

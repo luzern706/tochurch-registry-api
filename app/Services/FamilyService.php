@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Constants\AuditMenuCode;
+use App\Constants\FamilyRelation;
 use App\Helpers\ApiResponse;
 use App\Helpers\AuditLogHelper;
 use App\Helpers\JwtHelper;
@@ -16,22 +17,6 @@ class FamilyService
 {
     protected FamilyRepository $familyRepository;
     protected MemberRepository $memberRepository;
-
-    /**
-     * 양방향 자동 변환표
-     *  배우자 ↔ 배우자
-     *  부모   ↔ 자녀
-     *  자녀   ↔ 부모
-     *  형제자매 ↔ 형제자매
-     *  기타   ↔ 기타
-     */
-    private const REVERSE_RELATION = [
-        '배우자'   => '배우자',
-        '부모'     => '자녀',
-        '자녀'     => '부모',
-        '형제자매' => '형제자매',
-        '기타'     => '기타',
-    ];
 
     public function __construct(
         FamilyRepository $familyRepository,
@@ -78,7 +63,7 @@ class FamilyService
                 return ApiResponse::fail('VALIDATION_FAILED', '자기 자신은 가족으로 등록할 수 없습니다.', 400);
             }
 
-            $reverse = self::REVERSE_RELATION[$relationType] ?? null;
+            $reverse = FamilyRelation::REVERSE[$relationType] ?? null;
             if ($reverse === null) {
                 return ApiResponse::fail('VALIDATION_FAILED', '허용되지 않는 가족 관계입니다.', 400);
             }
@@ -133,7 +118,7 @@ class FamilyService
             }
 
             $relationType = $input['relation_type'] ?? $pair->relation_type;
-            $reverse      = self::REVERSE_RELATION[$relationType] ?? null;
+            $reverse      = FamilyRelation::REVERSE[$relationType] ?? null;
             if ($reverse === null) {
                 return ApiResponse::fail('VALIDATION_FAILED', '허용되지 않는 가족 관계입니다.', 400);
             }

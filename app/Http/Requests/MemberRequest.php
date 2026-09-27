@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Constants\MemberStatus;
 use App\Helpers\ApiResponse;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -27,7 +28,9 @@ class MemberRequest extends FormRequest
     public function rules(): array
     {
         return match ($this->route()?->getActionMethod()) {
-            'checkEmail' => ['email' => ['required', 'email', 'max:100']],
+            'checkDuplicate' => $this->duplicateRules(),
+            'sendInvite'     => ['member_id' => ['required', 'integer', 'min:1']],
+            'uploadProfileImage' => ['file' => ['required', 'file', 'mimes:png,jpg,jpeg', 'max:5120']],
             'getList'   => $this->listRules(),
             'getDetail' => $this->detailRules(),
             'register'  => $this->registerRules(),
@@ -60,6 +63,7 @@ class MemberRequest extends FormRequest
             'member_id' => '교인 ID',
             'page'      => '페이지',
             'size'      => '페이지 크기',
+            'file'      => '프로필 사진',
         ];
     }
 
@@ -68,7 +72,7 @@ class MemberRequest extends FormRequest
         return [
             'keyword'     => ['nullable', 'string', 'max:100'],
             'search_type' => ['nullable', 'in:name,phone,email'],
-            'status'      => ['nullable', 'in:active,inactive,unknown'],
+            'status'      => ['nullable', 'in:' . implode(',', MemberStatus::all())],
             'sort_by'     => ['nullable', 'in:created_at,name,birth_date'],
             'org_ids'     => ['nullable', 'array'],
             'org_ids.*'   => ['integer', 'min:1'],
@@ -87,10 +91,8 @@ class MemberRequest extends FormRequest
     private function registerRules(): array
     {
         return [
-            'email'    => ['required', 'email', 'max:100'],
-            'password' => ['required', 'string', 'min:4', 'max:100'],
+            'email'    => ['nullable', 'email', 'max:100'],
             'name'     => ['required', 'string', 'max:50'],
-            'nickname' => ['nullable', 'string', 'max:50'],
             'phone'    => ['nullable', 'string', 'max:20'],
             'gender'   => ['nullable', 'in:M,F'],
             'birth_date'     => ['nullable', 'date'],
@@ -99,7 +101,7 @@ class MemberRequest extends FormRequest
             'address_main'   => ['nullable', 'string', 'max:200'],
             'address_detail' => ['nullable', 'string', 'max:100'],
             'profile_image'  => ['nullable', 'string', 'max:500'],
-            'status'         => ['nullable', 'in:active,inactive,unknown'],
+            'status'         => ['nullable', 'in:' . implode(',', MemberStatus::registerable())],
             'memo'           => ['nullable', 'string'],
             'churchero_user_id' => ['nullable', 'integer', 'min:1'],
 
@@ -113,6 +115,7 @@ class MemberRequest extends FormRequest
             'baptism_at'         => ['nullable', 'date'],
             'baptism_church'     => ['nullable', 'string', 'max:100'],
             'registered_at'      => ['nullable', 'date'],
+            'registration_type'  => ['nullable', 'in:new,transfer,existing'],
             'welcomed_at'        => ['nullable', 'date'],
             'previous_church'    => ['nullable', 'string', 'max:100'],
             'leader_member_id'   => ['nullable', 'integer', 'min:1'],
@@ -120,6 +123,9 @@ class MemberRequest extends FormRequest
             'is_household_head'  => ['nullable', 'boolean'],
             'household_relation' => ['nullable', 'string', 'max:20'],
             'workplace'          => ['nullable', 'string', 'max:100'],
+            'occupation'         => ['nullable', 'string', 'max:100'],
+            'organization_id'          => ['nullable', 'integer', 'min:1'],
+            'household_head_member_id' => ['nullable', 'integer', 'min:1'],
             'custom_field_1'     => ['nullable', 'string', 'max:200'],
             'custom_field_2'     => ['nullable', 'string', 'max:200'],
             'custom_field_3'     => ['nullable', 'string', 'max:200'],
@@ -128,13 +134,25 @@ class MemberRequest extends FormRequest
 
     private function updateRules(): array
     {
+        // 등록 전용 파라미터(부서 매핑·세대주 가족 생성)는 수정에서 받지 않음 — 상세 화면의 조직·가족 API 사용
+        $rules = $this->registerRules();
+        unset($rules['organization_id'], $rules['household_head_member_id']);
+        // 수정은 이전·제적·소천까지 전체 상태 변경 허용
+        $rules['status'] = ['nullable', 'in:' . implode(',', MemberStatus::all())];
+
         return array_merge(
             ['member_id' => ['required', 'integer', 'min:1']],
-            array_map(
-                fn ($rules) => $this->makeOptional($rules),
-                $this->registerRules()
-            )
+            array_map(fn ($r) => $this->makeOptional($r), $rules)
         );
+    }
+
+    private function duplicateRules(): array
+    {
+        return [
+            'name'       => ['required', 'string', 'max:50'],
+            'phone'      => ['nullable', 'string', 'max:20'],
+            'birth_date' => ['nullable', 'date'],
+        ];
     }
 
     private function deleteRules(): array

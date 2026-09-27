@@ -57,6 +57,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // 교인 등록 완료 화면 "교회로 앱 초대" 링크 베이스 (?invite={token} 이 붙음)
+    'invite_base_url' => env('REGISTRY_INVITE_BASE_URL', 'https://www.tochurch.org/join'),
+
     'asset_url' => env('ASSET_URL'),
 
     /*

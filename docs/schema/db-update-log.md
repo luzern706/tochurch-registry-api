@@ -57,6 +57,7 @@
 | 14 | [14_reg_budgets.sql](14_reg_budgets.sql) | 재정 예산(`reg_budgets`) | ✅ | ✅ | |
 | 15 | [15_reg_finance_accounts.sql](15_reg_finance_accounts.sql) | 재정 계좌관리(`reg_finance_accounts`) | ✅ | ✅ | |
 | 16 | [16_reg_push_recipients.sql](16_reg_push_recipients.sql) | 푸시 발송 대상 스냅샷(`reg_push_recipients`) + `reg_messages.deep_link`/`resend_of` 컬럼 | ✅ | ✅ | |
+| 17 | [17_reg_members_register_alter.sql](17_reg_members_register_alter.sql) | 교인 등록 개편 — `reg_members` email/password NULL 허용·status ENUM 확장(new_family/transferred/removed/deceased)·`unlinked_at`, `reg_member_profiles.registration_type`/`occupation`, 신규 `reg_member_invites` | ✅ | 🔲 | local 2026-09-27 적용. **dev/운영 배포 전 반드시 실행** — 미실행 시 신규 교인 등록(이메일 없이) INSERT 실패, `registration_type`/`occupation` 컬럼 없음으로 등록 500 |
 
 > 12번은 SQL이 아니라 제안 문서([12_reg_offering_records_alter.md](12_reg_offering_records_alter.md)) — 아래 ALTER 섹션 참고, **의도적으로 미실행 상태**.
 

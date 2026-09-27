@@ -18,14 +18,38 @@ class MemberController extends Controller
         $this->memberService = $memberService;
     }
 
-    public function checkEmail(MemberRequest $request): JsonResponse
+    public function checkDuplicate(MemberRequest $request): JsonResponse
     {
         $authMemberId = JwtHelper::getAdminNoFromRequest($request);
         if ($authMemberId === null) {
             return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
         }
 
-        return $this->memberService->checkEmail($authMemberId, $request->validated());
+        return $this->memberService->checkDuplicate($authMemberId, $request->validated());
+    }
+
+    public function sendInvite(MemberRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+
+        return $this->memberService->sendInvite($authMemberId, (int) $request->validated()['member_id']);
+    }
+
+    public function uploadProfileImage(MemberRequest $request): JsonResponse
+    {
+        $authMemberId = JwtHelper::getAdminNoFromRequest($request);
+        if ($authMemberId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+        $churchId = JwtHelper::getChurchIdFromRequest();
+        if ($churchId === null) {
+            return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        }
+
+        return $this->memberService->uploadProfileImage($request->validated()['file'], $churchId);
     }
 
     public function getList(MemberRequest $request): JsonResponse
