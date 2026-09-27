@@ -455,7 +455,7 @@ class MemberService
     }
 
     /**
-     * 휴대폰 뒤 4자리 마스킹 (010-7143-6522 → 010-7143-****)
+     * 휴대폰 뒤 4자리 마스킹 (010-1234-5678 → 010-1234-****)
      */
     private function maskPhone(?string $phone): ?string
     {
