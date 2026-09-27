@@ -148,6 +148,14 @@ SELECT service_id, COUNT(*) FROM reg_attendance_records WHERE church_id = 33632 
 DROP TABLE `reg_services`;
 ```
 
+**적용 이력**
+
+| DB | 상태 |
+|---|---|
+| 로컬 dev DB | 삭제됨 — 실행 날짜 미기록 (2026-09-27 확인 시점에 이미 없음) |
+| dev/staging DB (3.35.24.97) | 삭제됨 — 실행 날짜 미기록 (2026-09-27 확인 시점에 이미 없음) |
+| 운영 DB (3.36.50.113) | 2026-09-27 삭제 — 삭제 전 0행, 참조 FK·뷰·프로시저·트리거 없음, 배포 코드 사용처 없음 확인. 출석 기록은 모두 `gh_church_timetable`로 재매핑된 상태였음 |
+
 ### 5) dev 환경 적용 (church_no=19715, 행복샘교회 2)
 
 ⚠️ **1)의 컬럼 추가 ALTER는 local과 별개 DB 인스턴스라 dev에서도 동일하게 다시 실행해야 함**
