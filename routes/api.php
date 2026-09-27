@@ -64,6 +64,11 @@ Route::prefix('v4/profile')->middleware('jwt.auth')->group(function () {
     Route::post('/changePassword',  [ProfileController::class, 'changePassword']);
 });
 
+// 로그인 페이지(비인증) 공지 미리보기 — 플랫폼 전체 공지라 교회 스코프 없음, 로그인 여부와 무관하게 제목만 노출
+Route::prefix('v4/notice')->group(function () {
+    Route::post('/getPublicList', [NoticeController::class, 'getPublicList']);
+});
+
 // 교회로 공지 센터 (읽기 전용) — 02_gh_admin_api가 작성한 gh_notice_v4*를 조회, 전 역할 공통 노출이라 jwt.auth만 요구
 Route::prefix('v4/notice')->middleware('jwt.auth')->group(function () {
     Route::post('/getList',         [NoticeController::class, 'getList']);

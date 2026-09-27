@@ -37,6 +37,22 @@ class NoticeRepository
         ", $params);
     }
 
+    /**
+     * 로그인 전 화면(로그인 페이지) 미리보기용 — 인증 없이 제목/유형/등록일만 노출.
+     * 읽음 여부(is_read)는 관리자별 데이터라 비인증 상태에서는 계산하지 않음.
+     */
+    public function getPublicList(int $limit = 5): array
+    {
+        // LIMIT 은 바인딩 파라미터가 아니라 내부 상수이므로 안전하게 문자열로 직접 삽입
+        return DB::select("
+            SELECT n.notice_no, n.type, n.title, n.created_at
+            FROM gh_notice_v4 n
+            WHERE n.is_deleted = 0 AND n.status = 'ACTIVE'
+            ORDER BY n.is_pinned DESC, n.notice_no DESC
+            LIMIT {$limit}
+        ");
+    }
+
     public function getResourceList(): array
     {
         return DB::select("

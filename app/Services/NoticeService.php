@@ -27,6 +27,17 @@ class NoticeService
         }
     }
 
+    public function getPublicNoticeList(): JsonResponse
+    {
+        try {
+            $list = $this->noticeRepository->getPublicList();
+            return ApiResponse::success(['list' => $list]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[NoticeService] getPublicNoticeList error: " . $e->getMessage(), "notice");
+            return ApiResponse::fail('INTERNAL_ERROR', '공지 목록 조회 중 오류가 발생했습니다.', 500);
+        }
+    }
+
     public function getResourceList(): JsonResponse
     {
         try {

@@ -42,4 +42,12 @@ class NoticeController extends Controller
     {
         return $this->noticeService->getResourceList();
     }
+
+    /**
+     * 로그인 페이지(비인증) 공지 미리보기 — jwt.auth 없음. 제목/유형/등록일만 반환.
+     */
+    public function getPublicList(): JsonResponse
+    {
+        return $this->noticeService->getPublicNoticeList();
+    }
 }
