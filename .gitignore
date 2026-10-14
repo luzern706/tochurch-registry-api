@@ -58,3 +58,6 @@ Homestead.json
 Homestead.yaml
 auth.json
 
+
+# Claude Code 로컬 설정(개인별 허용 목록 등, 커밋 제외)
+.claude/settings.local.json
