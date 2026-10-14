@@ -4,6 +4,39 @@
 
 ---
 
+## [2026-10-14] account_no 추가 + 비밀번호 설정 링크 토큰 테이블 (교적 계정 자동 발급)
+
+교회 등록 승인/담당자 추가 시 02_gh_admin_api 가 교적 계정을 만들고 이메일로 "비밀번호 설정 링크"를 보낸다.
+앱 계정(`gh_account`)과의 연결 키 + 설정 링크 토큰 저장소. 교적 비밀번호는 앱 비밀번호와 별개.
+(원본 SQL: 02_gh_admin_api `docs/23_registry_admin_provisioning.sql`, 마이그레이션과 동일 내용)
+
+- `account_no` 는 NULL 허용 — 기존 교회 공용 계정(id 방식)은 NULL 유지, 로그인 방식(`id` + 비밀번호)은 변경 없음.
+- 토큰은 원문 미저장, SHA-256 해시만 저장(`gh_church_admin_pw_token.token_hash`). 만료 72시간, 1회용.
+- 이 저장소(04_gh_registry_api)는 토큰 조회/소멸만 한다: `POST /v4/auth/checkSetupToken`, `POST /v4/auth/setupPassword`.
+
+```sql
+ALTER TABLE `gh_church_admin`
+  ADD COLUMN `account_no` BIGINT UNSIGNED NULL
+    COMMENT 'gh_account.account_no — 앱 계정 연결(NULL=교회 공용/미연결 계정)'
+    AFTER `church_no`,
+  ADD INDEX `idx_church_admin_account` (`church_no`, `account_no`);
+
+CREATE TABLE `gh_church_admin_pw_token` (
+  `token_no`       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `admin_no`       INT NOT NULL COMMENT 'gh_church_admin.admin_no',
+  `token_hash`     CHAR(64) NOT NULL COMMENT '설정 링크 토큰의 SHA-256 해시',
+  `expires_at`     DATETIME NOT NULL,
+  `consumed_at`    DATETIME NULL COMMENT '비밀번호 설정에 사용된 시각(1회용)',
+  `invalidated_at` DATETIME NULL COMMENT '재발급 등으로 무효화된 시각',
+  `created_at`     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`token_no`),
+  UNIQUE KEY `uq_church_admin_pw_token_hash` (`token_hash`),
+  KEY `idx_church_admin_pw_token_admin` (`admin_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+---
+
 ## [2026-07-17] email / phone 컬럼 추가 (내정보 기능)
 
 "내정보" 프로필 설정 화면(이메일/휴대폰 입력란)을 위해 추가. 둘 다 선택 입력.

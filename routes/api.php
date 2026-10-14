@@ -51,6 +51,9 @@ use Illuminate\Support\Facades\Route;
 // 인증 (로그인은 jwt.auth 제외)
 Route::prefix('v4/auth')->group(function () {
     Route::post('/adminSignIn', [AuthController::class, 'adminSignIn']);
+    // 02_gh_admin_api 가 발급한 "교적 비밀번호 설정 링크" — 로그인 전이라 jwt.auth 제외, 토큰 추측 방지용 호출 제한
+    Route::post('/checkSetupToken', [AuthController::class, 'checkSetupToken'])->middleware('throttle:20,1');
+    Route::post('/setupPassword',   [AuthController::class, 'setupPassword'])->middleware('throttle:10,1');
 });
 
 Route::prefix('v4/auth')->middleware('jwt.auth')->group(function () {
