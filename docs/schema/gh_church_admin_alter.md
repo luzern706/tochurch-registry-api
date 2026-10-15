@@ -13,6 +13,7 @@
 - `account_no` 는 NULL 허용 — 기존 교회 공용 계정(id 방식)은 NULL 유지, 로그인 방식(`id` + 비밀번호)은 변경 없음.
 - 토큰은 원문 미저장, SHA-256 해시만 저장(`gh_church_admin_pw_token.token_hash`). 만료 72시간, 1회용.
 - 이 저장소(04_gh_registry_api)는 토큰 조회/소멸만 한다: `POST /v4/auth/checkSetupToken`, `POST /v4/auth/setupPassword`.
+- **적용 이력**: 스테이징 2026-10-14, 운영 2026-10-15 (02_gh_admin_api 마이그레이션 `2026_10_14_000001_...` 로 적용). 기존 계정은 `account_no` NULL 유지.
 
 ```sql
 ALTER TABLE `gh_church_admin`
