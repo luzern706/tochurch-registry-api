@@ -58,7 +58,7 @@
 | 15 | [15_reg_finance_accounts.sql](15_reg_finance_accounts.sql) | 재정 계좌관리(`reg_finance_accounts`) | ✅ | ✅ | |
 | 16 | [16_reg_push_recipients.sql](16_reg_push_recipients.sql) | 푸시 발송 대상 스냅샷(`reg_push_recipients`) + `reg_messages.deep_link`/`resend_of` 컬럼 | ✅ | ✅ | |
 | 17 | [17_reg_members_register_alter.sql](17_reg_members_register_alter.sql) | 교인 등록 개편 — `reg_members` email/password NULL 허용·status ENUM 확장(new_family/transferred/removed/deceased)·`unlinked_at`, `reg_member_profiles.registration_type`/`occupation`, 신규 `reg_member_invites` | ✅ | ✅ | local·dev·운영 2026-09-27 적용(dev·운영 모두 적용 전후 라이브 조회로 확인, 운영 reg_members 0건이라 데이터 영향 없음) |
-| 18 | [18_reg_service_applications.sql](18_reg_service_applications.sql) | 교적·재정 서비스 신청 접수(`reg_service_applications`) — 서비스 권한 없는 관리자 안내 페이지 | ✅ | ✅ | local·스테이징 2026-10-21 적용(스테이징은 @@hostname ip-172-31-44-66 확인 후 실행). 운영 미적용(HeidiSQL 직접 실행 필요) |
+| 18 | [18_reg_service_applications.sql](18_reg_service_applications.sql) | 교적·재정 서비스 신청 접수(`reg_service_applications`) — 서비스 권한 없는 관리자 안내 페이지 | ✅ | ✅ | local·스테이징·운영 2026-10-21 적용(스테이징 ip-172-31-44-66 · 운영 ip-172-31-9-124 의 @@hostname 확인 후 실행) |
 
 > 12번은 SQL이 아니라 제안 문서([12_reg_offering_records_alter.md](12_reg_offering_records_alter.md)) — 아래 ALTER 섹션 참고, **의도적으로 미실행 상태**.
 

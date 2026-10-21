@@ -1,6 +1,6 @@
 -- reg_service_applications 신규 테이블
 -- 2026-10-21, 교적·재정 서비스 신청 접수 (서비스 권한이 없는 관리자에게 열리는 안내 페이지의 '교적·재정 신청하기')
--- 적용 상태: 로컬 dev DB 2026-10-21(API·브라우저 검증) · 스테이징 DB 2026-10-21(@@hostname ip-172-31-44-66 확인 후 실행, 0건) 적용 완료 / 운영 DB는 미적용 — HeidiSQL에서 직접 실행 필요.
+-- 적용 상태: 로컬 dev DB 2026-10-21(API·브라우저 검증) · 스테이징 DB 2026-10-21(@@hostname ip-172-31-44-66 확인 후 실행, 0건) · 운영 DB 2026-10-21(@@hostname ip-172-31-9-124 확인 후 실행, 0건) 적용 완료.
 -- 배포 순서: 이 SQL 을 대상 DB 에 먼저 실행한 뒤 API 를 배포한다(테이블이 없으면 v4/onboarding/getStatus 가 500 → 프론트는 fail-open 으로 기존 화면 유지).
 --
 -- 서비스 권한의 소스는 기존 gh_church_admin_role.perm_registry / perm_finance (02_gh_admin_api 가 관리).
