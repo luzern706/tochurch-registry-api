@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\PushNotificationController;
 use App\Http\Controllers\Api\MessageTemplateController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\OfferingController;
+use App\Http\Controllers\Api\OnboardingController;
 use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ReportController;
@@ -67,6 +68,12 @@ Route::prefix('v4/profile')->middleware('jwt.auth')->group(function () {
     Route::post('/changePassword',  [ProfileController::class, 'changePassword']);
 });
 
+// 교적·재정 서비스 이용 상태 + 신청 (서비스 권한이 없는 관리자의 안내 페이지용 — 권한 유무와 무관하게 써야 하므로 jwt.auth만)
+Route::prefix('v4/onboarding')->middleware('jwt.auth')->group(function () {
+    Route::post('/getStatus',    [OnboardingController::class, 'getStatus']);
+    Route::post('/applyService', [OnboardingController::class, 'applyService']);
+});
+
 // 로그인 페이지(비인증) 공지 미리보기 — 플랫폼 전체 공지라 교회 스코프 없음, 로그인 여부와 무관하게 제목만 노출
 Route::prefix('v4/notice')->group(function () {
     Route::post('/getPublicList', [NoticeController::class, 'getPublicList']);
@@ -79,8 +86,8 @@ Route::prefix('v4/notice')->middleware('jwt.auth')->group(function () {
     Route::post('/getResourceList', [NoticeController::class, 'getResourceList']);
 });
 
-// 교회 기본정보 (설정 > 기본정보 — SETTING 권한 사용)
-Route::prefix('v4/churchProfile')->middleware(['jwt.auth', 'permission:SETTING'])->group(function () {
+// 교회 기본정보 (설정 > 기본정보 — SETTING 권한 사용, ',free' = 관리 > 교회 소개도 쓰므로 서비스 신청 전 계정도 허용)
+Route::prefix('v4/churchProfile')->middleware(['jwt.auth', 'permission:SETTING,free'])->group(function () {
     Route::post('/getProfile',             [ChurchProfileController::class, 'getProfile']);
     Route::post('/getPastorOptions',       [ChurchProfileController::class, 'getPastorOptions']);
     Route::post('/getDenominationOptions', [ChurchProfileController::class, 'getDenominationOptions']);
@@ -161,8 +168,8 @@ Route::prefix('v4/family')->middleware(['jwt.auth', 'permission:MEMBER'])->group
     Route::post('/delete',   [FamilyController::class, 'delete']);
 });
 
-// 예배/모임 정의 (GNB에 별도 메뉴 없음 — 교직설정 페이지 내부 "예배 기준" 탭 — SETTING 권한 재사용)
-Route::prefix('v4/worship')->middleware(['jwt.auth', 'permission:SETTING'])->group(function () {
+// 예배/모임 정의 (GNB에 별도 메뉴 없음 — 교직설정 페이지 내부 "예배 기준" 탭 — SETTING 권한 재사용, ',free' = 관리 > 예배안내도 쓰므로 서비스 신청 전 계정도 허용)
+Route::prefix('v4/worship')->middleware(['jwt.auth', 'permission:SETTING,free'])->group(function () {
     Route::post('/getList',   [WorshipController::class, 'getList']);
     Route::post('/getDetail', [WorshipController::class, 'getDetail']);
     Route::post('/register', [WorshipController::class, 'register']);

@@ -3329,5 +3329,68 @@
 
 ---
 
+## 18. 서비스 안내 / 신청 (Onboarding)
+
+> 교적·재정 서비스 권한이 없는 관리자에게 열리는 안내 페이지용. 권한 유무와 무관하게 호출해야 하므로 `jwt.auth`만 요구한다.
+> 권한 소스는 `gh_church_admin_role.perm_registry` / `perm_finance`(02 관리자가 관리). 계정과 연결된 활성 권한 행(회수되지 않은, `account_no` 또는 신청 이메일 = 로그인 아이디 일치)이 있고 두 값이 모두 0이면 "권한 없음".
+> **권한 행이 없는 계정(기존 교회 공용 계정 등)은 이전과 같이 사용 가능으로 본다.**
+
+### POST /v4/onboarding/getStatus
+
+- **인증 필요**: 예 (`jwt.auth`)
+
+**Request**: 없음
+
+**Response (성공)**
+
+```json
+{
+  "status": "success",
+  "code": "",
+  "message": "",
+  "data": {
+    "has_access": false,
+    "perm_registry": false,
+    "perm_finance": false,
+    "church_name": "행복샘교회",
+    "application": null
+  }
+}
+```
+
+- `application`: 이 교회의 가장 최근 신청(`received` 접수 / `completed` 처리완료) — `{ "application_id": 1, "status": "received", "requested_at": "2026-10-21 20:26:05" }`, 없으면 `null`
+- 에러: `NOT_FOUND`(404, 비활성/없는 계정), `TOKEN_INVALID`(401)
+
+### POST /v4/onboarding/applyService
+
+교적·재정 서비스 신청을 접수한다(`reg_service_applications`에 `received`로 기록, 감사 로그 `SERVICE_APPLICATION`/`CREATE`). 권한 부여 자체는 02 관리자 화면의 담당자 권한에서 처리한다.
+
+- **인증 필요**: 예 (`jwt.auth`)
+
+**Request**: 없음
+
+**Response (성공)**
+
+```json
+{
+  "status": "success",
+  "code": "",
+  "message": "",
+  "data": { "application_id": 1, "status": "received", "requested_at": "2026-10-21 20:26:05" }
+}
+```
+
+- 에러: `VALIDATION_FAILED`(400, 이미 서비스 권한이 있는 계정), `DUPLICATE_DATA`(400, 이미 접수된 신청이 있음), `NOT_FOUND`, `TOKEN_INVALID`
+
+### 무료 기능 접근 (권한 판정 변경 사항)
+
+서비스 신청 전 계정(위 `has_access=false`)에도 다음을 열어 준다. 다른 역할·계정의 판정은 변경 없음.
+
+- `WEBSITE` 권한 라우트(교회 소개·소식/공지·미디어): 역할 기본 정책과 무관하게 허용 — `POST v4/permission/getMyPermissions`의 `WEBSITE`도 `true`로 내려간다.
+- `v4/churchProfile/*`, `v4/worship/*`: 관리 > 교회 소개·예배안내가 함께 쓰므로 `permission:SETTING,free` 옵션으로 허용(`code`·`organization` 등 다른 `SETTING` 라우트는 그대로 403).
+- 교적·재정 API 자체는 서버에서 막지 않는다(프론트에서 메뉴·경로 제한).
+
+---
+
 *이 문서는 실제 Controller, Request, Service 코드 기반으로 자동 생성되었습니다.*
 *갱신일: 2026-07-17*

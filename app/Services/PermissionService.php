@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Constants\AuditMenuCode;
 use App\Constants\PermissionDefaults;
 use App\Constants\PermissionMenuTree;
+use App\Constants\ServiceAccessPolicy;
 use App\Helpers\ApiResponse;
 use App\Helpers\AuditLogHelper;
 use App\Helpers\LogHelper;
+use App\Repositories\OnboardingRepository;
 use App\Repositories\PermissionRepository;
 use Illuminate\Http\JsonResponse;
 
@@ -24,10 +26,25 @@ class PermissionService
     private const CUSTOMIZABLE_ROLES = ['pastor', 'minister', 'volunteer'];
 
     protected PermissionRepository $repository;
+    protected OnboardingRepository $onboardingRepository;
 
-    public function __construct(PermissionRepository $repository)
+    public function __construct(PermissionRepository $repository, OnboardingRepository $onboardingRepository)
     {
         $this->repository = $repository;
+        $this->onboardingRepository = $onboardingRepository;
+    }
+
+    /** 교적·재정 서비스 권한이 없는(신청 전) 계정인지 — 이런 계정에도 무료 메뉴(ServiceAccessPolicy::FREE_MENUS)는 열어준다 */
+    public function isFreeTierAdmin(?int $adminNo): bool
+    {
+        if ($adminNo === null) {
+            return false;
+        }
+        $admin = $this->onboardingRepository->findAdmin($adminNo);
+        if ($admin === null) {
+            return false;
+        }
+        return !ServiceAccessPolicy::hasAccess($this->onboardingRepository->getActiveRoles($admin));
     }
 
     /** 소메뉴(페이지) 코드의 접근 여부 — 오버라이드가 없으면 소속 중메뉴의 기본 정책 사용 */
@@ -79,7 +96,7 @@ class PermissionService
     }
 
     /** 로그인한 본인의 역할 기준 권한만 반환 — 프론트 메뉴 필터링/페이지 가드용 (super.auth 불필요) */
-    public function getMyPermissions(int $churchId, string $role): JsonResponse
+    public function getMyPermissions(int $churchId, string $role, ?int $adminNo = null): JsonResponse
     {
         try {
             if (!array_key_exists($role, self::ROLE_LABELS)) {
@@ -96,6 +113,14 @@ class PermissionService
                 foreach ($allPages as $pageCode) {
                     $permissions[$pageCode] = $this->resolvePageAccess($role, $pageCode, $overrides);
                 }
+
+                if ($this->isFreeTierAdmin($adminNo)) {
+                    foreach (ServiceAccessPolicy::FREE_MENUS as $menuCode) {
+                        foreach (PermissionMenuTree::pagesOfMenu($menuCode) as $pageCode) {
+                            $permissions[$pageCode] = true;
+                        }
+                    }
+                }
             }
 
             return ApiResponse::success(['role' => $role, 'permissions' => $permissions]);
@@ -109,7 +134,7 @@ class PermissionService
      * 중메뉴(API 라우트 그룹) 단위 접근 여부 — CheckPermissionMiddleware 전용.
      * 소속 소메뉴 중 하나라도 접근 가능하면 그 메뉴에 걸린 API 전체를 허용한다.
      */
-    public function hasMenuAccess(int $churchId, string $role, string $menuCode): bool
+    public function hasMenuAccess(int $churchId, string $role, string $menuCode, ?int $adminNo = null): bool
     {
         if ($role === 'admin') {
             return true;
@@ -121,6 +146,10 @@ class PermissionService
         $pageCodes = PermissionMenuTree::pagesOfMenu($menuCode);
         if (empty($pageCodes)) {
             return false;
+        }
+
+        if (in_array($menuCode, ServiceAccessPolicy::FREE_MENUS, true) && $this->isFreeTierAdmin($adminNo)) {
+            return true;
         }
 
         $overrides = $this->repository->getOverridesForPages($churchId, $role, $pageCodes);

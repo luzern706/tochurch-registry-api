@@ -38,7 +38,7 @@ class PermissionController extends Controller
             return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
         }
         $role = JwtHelper::getAdminRoleFromRequest();
-        return $this->permissionService->getMyPermissions($churchId, $role);
+        return $this->permissionService->getMyPermissions($churchId, $role, $adminNo);
     }
 
     public function saveRole(PermissionRequest $request): JsonResponse
