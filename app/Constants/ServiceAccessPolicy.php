@@ -3,27 +3,20 @@
 namespace App\Constants;
 
 /**
- * 교적·재정 서비스 사용 권한 판정 규칙 (OnboardingService, PermissionService 공용).
+ * 교적·재정 서비스 사용 여부 판정 규칙 (OnboardingService, PermissionService 공용).
  *
- * 권한 소스는 gh_church_admin_role.perm_registry / perm_finance.
- * 권한 행이 아예 없는 계정(기존 교회 공용 계정 등)은 이전부터 교적을 쓰고 있었으므로 사용 가능으로 본다.
+ * 판정은 교회 단위다 — "이 교회가 교적·재정을 쓰고 있는가".
+ * 교회 안에 교적(perm_registry) 또는 재정(perm_finance) 권한이 켜진 활성 담당자가 있거나,
+ * 이미 교적 데이터가 있으면 사용 중으로 본다. 둘 다 아니면 안내 페이지 대상이다.
  */
 class ServiceAccessPolicy
 {
     /** 서비스 신청 전에도 쓸 수 있는 무료 메뉴(권한 매트릭스의 중메뉴 코드) */
     public const FREE_MENUS = [AuditMenuCode::WEBSITE];
 
-    /** @param array<int, object> $roles OnboardingRepository::getActiveRoles() 결과 */
-    public static function hasAccess(array $roles): bool
+    /** @param array{registry:bool, finance:bool, has_data:bool} $usage OnboardingRepository::getChurchServiceUsage() 결과 */
+    public static function usesService(array $usage): bool
     {
-        if ($roles === []) {
-            return true;
-        }
-        foreach ($roles as $role) {
-            if ((int) $role->perm_registry === 1 || (int) $role->perm_finance === 1) {
-                return true;
-            }
-        }
-        return false;
+        return $usage['registry'] || $usage['finance'] || $usage['has_data'];
     }
 }

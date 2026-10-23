@@ -14,7 +14,7 @@ use Illuminate\Http\JsonResponse;
 /**
  * 교적·재정 서비스 사용 권한 확인 + 신청 접수.
  *
- * 판정 규칙은 ServiceAccessPolicy 참고(권한 소스: gh_church_admin_role.perm_registry / perm_finance).
+ * 판정은 교회 단위 — ServiceAccessPolicy 참고(권한 소스: gh_church_admin_role.perm_registry / perm_finance, 교적 데이터 유무).
  */
 class OnboardingService
 {
@@ -89,24 +89,16 @@ class OnboardingService
 
     private function buildStatus(object $admin): array
     {
-        $roles = $this->onboardingRepository->getActiveRoles($admin);
+        $churchId = (int) $admin->church_no;
+        $usage    = $this->onboardingRepository->getChurchServiceUsage($churchId);
 
-        $registry = false;
-        $finance  = false;
-        foreach ($roles as $role) {
-            $registry = $registry || (int) $role->perm_registry === 1;
-            $finance  = $finance || (int) $role->perm_finance === 1;
-        }
-
-        $hasAccess = ServiceAccessPolicy::hasAccess($roles);
-
-        $churchId    = (int) $admin->church_no;
         $application = $this->onboardingRepository->findLatestApplication($churchId);
 
         return [
-            'has_access'    => $hasAccess,
-            'perm_registry' => $registry,
-            'perm_finance'  => $finance,
+            'has_access'    => ServiceAccessPolicy::usesService($usage),
+            'perm_registry' => $usage['registry'],
+            'perm_finance'  => $usage['finance'],
+            'has_data'      => $usage['has_data'],
             'church_name'   => $this->authRepository->getChurchName($churchId) ?? '',
             'application'   => $application ? $this->formatApplication($application) : null,
         ];

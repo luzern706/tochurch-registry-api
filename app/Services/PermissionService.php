@@ -34,7 +34,7 @@ class PermissionService
         $this->onboardingRepository = $onboardingRepository;
     }
 
-    /** 교적·재정 서비스 권한이 없는(신청 전) 계정인지 — 이런 계정에도 무료 메뉴(ServiceAccessPolicy::FREE_MENUS)는 열어준다 */
+    /** 교적·재정을 쓰지 않는(신청 전) 교회의 관리자인지 — 이런 계정에도 무료 메뉴(ServiceAccessPolicy::FREE_MENUS)는 열어준다 */
     public function isFreeTierAdmin(?int $adminNo): bool
     {
         if ($adminNo === null) {
@@ -44,7 +44,7 @@ class PermissionService
         if ($admin === null) {
             return false;
         }
-        return !ServiceAccessPolicy::hasAccess($this->onboardingRepository->getActiveRoles($admin));
+        return !ServiceAccessPolicy::usesService($this->onboardingRepository->getChurchServiceUsage((int) $admin->church_no));
     }
 
     /** 소메뉴(페이지) 코드의 접근 여부 — 오버라이드가 없으면 소속 중메뉴의 기본 정책 사용 */

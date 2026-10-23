@@ -3332,8 +3332,8 @@
 ## 18. 서비스 안내 / 신청 (Onboarding)
 
 > 교적·재정 서비스 권한이 없는 관리자에게 열리는 안내 페이지용. 권한 유무와 무관하게 호출해야 하므로 `jwt.auth`만 요구한다.
-> 권한 소스는 `gh_church_admin_role.perm_registry` / `perm_finance`(02 관리자가 관리). 계정과 연결된 활성 권한 행(회수되지 않은, `account_no` 또는 신청 이메일 = 로그인 아이디 일치)이 있고 두 값이 모두 0이면 "권한 없음".
-> **권한 행이 없는 계정(기존 교회 공용 계정 등)은 이전과 같이 사용 가능으로 본다.**
+> 판정은 **교회 단위**("이 교회가 교적·재정을 쓰고 있는가")다. 교회 안에 활성(회수되지 않은) 담당자 권한 행 중 `gh_church_admin_role.perm_registry` 또는 `perm_finance`가 켜진 것이 있거나, 이미 교적 데이터(`reg_members`)가 있으면 사용 중, 둘 다 아니면 "권한 없음"(안내 페이지 대상).
+> 권한 행이 없는 기존 교회 공용 계정도 교적 데이터가 없으면 "권한 없음"이다(2026-10-23 변경 — 그 전에는 권한 행이 없으면 사용 가능으로 봤음).
 
 ### POST /v4/onboarding/getStatus
 
@@ -3352,6 +3352,7 @@
     "has_access": false,
     "perm_registry": false,
     "perm_finance": false,
+    "has_data": false,
     "church_name": "행복샘교회",
     "application": null
   }

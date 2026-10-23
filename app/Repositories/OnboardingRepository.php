@@ -16,27 +16,25 @@ class OnboardingRepository
     }
 
     /**
-     * 이 관리자 계정에 연결된 활성(회수되지 않은) 담당자 권한 행.
-     * 연결 키는 02_gh_admin_api 의 교적 계정 발급과 동일 — account_no 우선, 없으면 신청 이메일 = 로그인 아이디.
-     * 기존 교회 공용 계정(account_no NULL, id 방식)은 권한 행이 없어 빈 배열이 된다.
+     * 교회 단위 교적·재정 사용 현황.
+     *  - registry/finance : 이 교회의 활성(회수되지 않은) 담당자 권한 행 중 해당 권한이 켜진 것이 있는지(gh_church_admin_role)
+     *  - has_data         : 교적 데이터가 이미 있는지(교인 기록) — 권한 행 없이 쓰던 교회가 안내 페이지에 갇히지 않게 하는 안전망
      */
-    public function getActiveRoles(stdClass $admin): array
+    public function getChurchServiceUsage(int $churchNo): array
     {
-        $loginId = mb_strtolower((string) $admin->id);
-
-        $query = DB::table('gh_church_admin_role')
-            ->where('church_no', $admin->church_no)
+        $perm = DB::table('gh_church_admin_role')
+            ->where('church_no', $churchNo)
             ->whereNull('revoked_at')
-            ->where(function ($q) use ($admin, $loginId) {
-                if ($admin->account_no !== null) {
-                    $q->where('account_no', $admin->account_no)
-                      ->orWhereRaw('LOWER(applicant_email) = ?', [$loginId]);
-                } else {
-                    $q->whereRaw('LOWER(applicant_email) = ?', [$loginId]);
-                }
-            });
+            ->selectRaw('COALESCE(MAX(perm_registry), 0) AS registry, COALESCE(MAX(perm_finance), 0) AS finance')
+            ->first();
 
-        return $query->get(['role_no', 'perm_registry', 'perm_finance'])->all();
+        $hasData = DB::table('reg_members')->where('church_id', $churchNo)->exists();
+
+        return [
+            'registry' => (int) $perm->registry === 1,
+            'finance'  => (int) $perm->finance === 1,
+            'has_data' => $hasData,
+        ];
     }
 
     public function findLatestApplication(int $churchId): ?stdClass
