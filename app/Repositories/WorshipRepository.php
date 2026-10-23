@@ -55,7 +55,8 @@ class WorshipRepository
         unset($data['church_id']);
         $data['registered'] = now();
         $data['updated']    = now();
-        $data['place']      = $data['place'] ?? '';
+        // 오피스의 '비고'(note)가 곧 장소 안내 — 앱·관리자(예배정보)가 읽는 place 에도 동일하게 채움
+        $data['place']      = $data['place'] ?? ($data['note'] ?? '');
         $data['timetext']   = $data['timetext'] ?? $this->buildTimetext($data['day_of_week'] ?? null, $data['start_time'] ?? null);
         return (int) DB::table('gh_church_timetable')->insertGetId($data, 'timetable_no');
     }
@@ -63,6 +64,9 @@ class WorshipRepository
     public function updateWorship(int $serviceId, array $data): int
     {
         $data['updated'] = now();
+        if (array_key_exists('note', $data) && !array_key_exists('place', $data)) {
+            $data['place'] = $data['note'] ?? '';
+        }
         return DB::table('gh_church_timetable')
             ->where('timetable_no', $serviceId)
             ->update($data);
