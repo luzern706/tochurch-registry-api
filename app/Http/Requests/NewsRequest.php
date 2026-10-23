@@ -27,6 +27,7 @@ class NewsRequest extends FormRequest
 
             'bulletinRegister' => $this->bulletinRegisterRules(),
             'bulletinUpdate'   => $this->bulletinUpdateRules(),
+            'bulletinUploadFile' => ['file' => ['required', 'file', 'mimes:png,jpg,jpeg,pdf', 'max:10240']],
             'bulletinDelete'   => $this->keyRules(),
 
             'qnaRegister' => $this->qnaRegisterRules(),

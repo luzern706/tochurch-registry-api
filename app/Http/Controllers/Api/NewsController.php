@@ -37,6 +37,14 @@ class NewsController extends Controller
         return $this->newsService->registerNews($authMemberId, $request->validated());
     }
 
+    public function bulletinUploadFile(NewsRequest $request): JsonResponse
+    {
+        if ($this->authMemberId($request) === null) return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        $churchId = JwtHelper::getChurchIdFromRequest();
+        if ($churchId === null) return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        return $this->newsService->uploadBulletinFile($request->validated()['file'], $churchId);
+    }
+
     public function update(NewsRequest $request): JsonResponse
     {
         $authMemberId = $this->authMemberId($request);

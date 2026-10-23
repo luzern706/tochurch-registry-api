@@ -197,6 +197,7 @@ Route::prefix('v4/news')->middleware(['jwt.auth', 'permission:WEBSITE'])->group(
     Route::post('/bulletin/getList',  [NewsController::class, 'bulletinGetList']);
     Route::post('/bulletin/register', [NewsController::class, 'bulletinRegister']);
     Route::post('/bulletin/update',   [NewsController::class, 'bulletinUpdate']);
+    Route::post('/bulletin/uploadFile', [NewsController::class, 'bulletinUploadFile']);
     Route::post('/bulletin/delete',   [NewsController::class, 'bulletinDelete']);
 
     Route::post('/qna/getList',  [NewsController::class, 'qnaGetList']);

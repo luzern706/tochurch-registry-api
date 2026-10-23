@@ -143,6 +143,29 @@ class NewsService
         }
     }
 
+    public function uploadBulletinFile(UploadedFile $file, int $churchId): JsonResponse
+    {
+        $err = S3FileHelper::validate($file, FileUploadConstants::ALLOWED_DOCUMENT_EXTENSIONS, '주보 파일');
+        if ($err !== null) {
+            return ApiResponse::fail('INVALID_FILE_TYPE', $err, 400);
+        }
+
+        try {
+            $upload = S3FileHelper::upload($file, 'uploads/bulletin', "church_{$churchId}_bulletin_" . time() . '_' . uniqid());
+            S3FileHelper::cleanupLocalTemp($upload['local_path']);
+            return ApiResponse::success([
+                'url'  => $upload['s3_url'],
+                'name' => $file->getClientOriginalName(),
+                'type' => $upload['ext'] === 'pdf' ? 'PDF' : 'IMAGE',
+            ]);
+        } catch (\RuntimeException $e) {
+            return ApiResponse::fail('UPLOAD_FAILED', '주보 파일 업로드에 실패했습니다.', 500);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[NewsService] uploadBulletinFile error: " . $e->getMessage(), "news");
+            return ApiResponse::fail('INTERNAL_ERROR', '주보 파일 업로드 중 오류가 발생했습니다.', 500);
+        }
+    }
+
     public function updateBulletin(int $authMemberId, int $contentNo, array $input): JsonResponse
     {
         return $this->genericUpdate($authMemberId, $contentNo, $input, ['title', 'files', 'date'], '주보', function ($v) {

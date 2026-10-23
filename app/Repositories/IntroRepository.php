@@ -31,6 +31,14 @@ class IntroRepository
         $existing = $this->getIntro($churchNo);
         $data['updated'] = now();
 
+        // message 는 NOT NULL(기본값 없음) — 소개 데이터가 아직 없는 새 교회가 다른 섹션(hero 등)부터
+        // 저장하거나 전하는 말을 비우는 경우에도 실패하지 않도록 빈 문자열로 보정
+        if (!$existing && !array_key_exists('message', $data)) {
+            $data['message'] = '';
+        } elseif (array_key_exists('message', $data) && $data['message'] === null) {
+            $data['message'] = '';
+        }
+
         if ($existing) {
             DB::table('gh_church_intro')->where('intro_no', $existing->intro_no)->update($data);
         } else {

@@ -32,12 +32,18 @@ class S3FileHelper
     {
         $ext = strtolower($file->getClientOriginalExtension());
         $destinationPath = public_path('uploads');
-        if (!file_exists($destinationPath)) {
-            mkdir($destinationPath, 0777, true);
-        }
         $hashedName = $file->hashName();
         $localPath = $destinationPath . '/' . $hashedName;
-        $file->move($destinationPath, $hashedName);
+        try {
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0777, true);
+            }
+            $file->move($destinationPath, $hashedName);
+        } catch (\Throwable $e) {
+            // 서버의 public/uploads 쓰기 권한 문제가 원인인 경우 로그로 구분
+            LogHelper::logWrite("[S3FileHelper] local move error ({$destinationPath}): " . $e->getMessage(), "file");
+            throw new \RuntimeException('UPLOAD_FAILED');
+        }
 
         $s3Key = "{$s3KeyPrefix}/{$baseFileName}.{$ext}";
 
