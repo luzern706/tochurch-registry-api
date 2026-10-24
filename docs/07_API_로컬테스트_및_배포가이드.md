@@ -329,9 +329,8 @@ drwxrwxr-x. ec2-user apache bootstrap/cache/
 ### 7-5. 캐시 최적화
 
 ```bash
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan optimize        # config·route 캐시 생성 (Laravel 9/10 기준, 뷰 캐시는 포함되지 않음)
+php artisan view:cache      # 뷰 캐시는 별도 실행
 ```
 
 ---
@@ -415,9 +414,8 @@ sudo chmod -R 775 /var/www/gh_registry/api/v_2/bootstrap/cache
 # 2. 대기 버전에서 composer, 캐시 작업
 cd /var/www/gh_registry_api/v_2
 composer install --no-dev --optimize-autoloader
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan optimize        # config·route 캐시 생성 (Laravel 9/10 기준, 뷰 캐시는 포함되지 않음)
+php artisan view:cache      # 뷰 캐시는 별도 실행
 
 # 3. Apache 경로 전환 (v_1 → v_2)
 sudo sed -i 's|gh_registry_api/v_1/public|gh_registry_api/v_2/public|g' \
@@ -438,9 +436,8 @@ sudo systemctl reload httpd   # restart 아닌 reload — 무중단
 # 2. 대기 버전에서 composer, 캐시 작업
 cd /var/www/gh_registry/api/v_2
 composer install --no-dev --optimize-autoloader
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan optimize        # config·route 캐시 생성 (Laravel 9/10 기준, 뷰 캐시는 포함되지 않음)
+php artisan view:cache      # 뷰 캐시는 별도 실행
 
 # 3. Apache 경로 전환 (v_1 → v_2)
 sudo sed -i 's|gh_registry/api/v_1/public|gh_registry/api/v_2/public|g' \
@@ -455,6 +452,48 @@ sudo systemctl reload httpd   # restart 아닌 reload — 무중단
 
 > **주의:** `systemctl restart` 는 프로세스 재시작으로 순간 중단 발생.  
 > 반드시 `systemctl reload` 를 사용합니다.
+
+### 8-5. 업로드 후 캐시 정리와 데몬 재시작 (이전에 서비스하던 폴더를 다시 쓰는 경우)
+
+8-4 처럼 직전까지 서비스하던 폴더(`v_1` ↔ `v_2`)를 대기 폴더로 다시 쓰면 `bootstrap/cache/`에 **예전 캐시 파일이 남아 있다**. 업로드 때 `bootstrap/cache/*.php`는 제외하므로 소스를 덮어써도 지워지지 않고, 라우트 캐시가 남아 있으면 새로 추가한 라우트가 404가 된다. (2026-10-24 `03_gh_www_api` 신고 API 배포 때 정리한 절차를 이 프로젝트에도 동일 적용)
+
+**순서** (대기 폴더에서, 7-3 권한 설정 후)
+
+```bash
+# 재사용 폴더는 storage·bootstrap/cache 가 apache 소유라 ec2-user 가 쓰지 못할 수 있다 — 먼저 맞춘다
+sudo chown -R ec2-user:apache storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+mkdir -p storage/logs storage/framework/{cache,sessions,views}
+php artisan optimize:clear      # 예전 캐시(config·route·view·events·compiled) 모두 삭제
+composer install --no-dev --optimize-autoloader   # composer.json/lock 을 바꾼 배포만 (아니면 생략)
+php artisan optimize            # config·route 캐시 생성 (Laravel 9/10 은 뷰 캐시 미포함)
+php artisan view:cache          # 뷰 캐시는 별도 실행 (7-5 의 개별 명령 3개와 같은 결과)
+php artisan route:list | grep <새 라우트>   # 새 라우트가 보이는지 확인
+```
+
+캐시 생성 후 **소유권·권한을 한 번 더 맞춘다.** `ec2-user` 로 `php artisan` 을 실행하면 새로 생기는 파일(`laravel.log`, 컴파일된 뷰)이 644 라서 apache 그룹(php-fpm)이 쓰지 못하고, 나중에 `Permission denied` 가 난다.
+
+```bash
+sudo chown -R ec2-user:apache storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+sudo find storage bootstrap/cache -type d -exec chmod g+s {} \;   # 선택: 새 파일이 apache 그룹으로 생성되게
+```
+
+SELinux 를 쓰는 서버라면 `sudo chcon -R -t httpd_sys_rw_content_t storage bootstrap/cache` 도 필요할 수 있다.
+
+Apache 경로 전환(8-4 의 3번) 후:
+
+```bash
+sudo apachectl configtest      # "Syntax OK" 확인
+sudo systemctl reload httpd    # 새 conf 반영 (무중단)
+sudo systemctl restart php-fpm # OPcache·realpath 캐시 비우기 — 전환 후 마지막에 한다 (php-fpm 구성인 서버만)
+```
+
+- `optimize` 는 캐시를 새로 만들 뿐 clear 나 데몬 재시작을 하지 않는다. 재사용 폴더라면 `optimize:clear` 를 먼저 하고, 재시작은 별도로 한다.
+- 재시작은 캐시를 만든 뒤에 한다. 먼저 했다면 캐시 생성 후 한 번 더.
+- `optimize`(=`config:cache`) 전에 `.env` 가 운영 값이고 `storage/framework/views` 폴더가 있어야 한다.
+- php-fpm 구성인지 확인: `systemctl is-active php-fpm` (다른 두 API 서버는 php-fpm 구조). php-fpm 이 아니면 httpd reload 만으로 충분하다.
+- 처음 만든 폴더(8-2 `v_2` 초기 생성 직후)는 이전 캐시가 없어 `optimize:clear` 는 생략할 수 있다.
 
 ---
 
