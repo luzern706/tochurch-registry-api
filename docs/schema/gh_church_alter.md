@@ -342,3 +342,38 @@ ALTER TABLE `gh_church_intro` MODIFY COLUMN `vision` TEXT NULL DEFAULT NULL;
 ```sql
 SHOW COLUMNS FROM gh_church_intro LIKE 'vision';
 ```
+
+---
+
+## [2026-10-26] gh_church_page_setting / gh_church_small_group 신설 (관리자 교회 등록·상세와 공유)
+
+⚠️ **교적 쪽 화면은 아직 이 테이블에 연결되지 않음** — `WebsiteHome.jsx`의 "페이지 공개 설정"(공개 토글·노출 대상·검색 노출·섹션 토글)은
+지금 화면 state 일 뿐 저장하지 않고, `WorshipMeeting.jsx`에는 소그룹 탭이 없다(`WebsiteHome` 의 "소그룹" 완료 표시는 `done: false` 고정).
+관리자(02_gh_admin_api)가 먼저 아래 구조로 저장소를 만들었으니, 교적은 같은 테이블을 읽고 쓰면 된다.
+
+✅ **local(gyohyero) 적용 완료.** dev/운영은 미적용 — 관리자 마이그레이션
+`02_gh_admin_api/database/migrations/2026_10_26_000001_create_church_page_setting_and_small_group.php`
+(동일 SQL: `02_gh_admin_api/docs/30_church_page_setting_small_group.sql`) 실행.
+
+설계 메모:
+- **공개 설정은 교회당 1행(church_no PK)**. 행이 없으면 기본값(전체 공개 · 내부검색/지도 노출 · 외부검색 비노출 · 섹션 전체 노출) = 교적 화면 초기값과 동일.
+  `audience`: `public` / `members-only` / `church-only` / `invite-only` (교적 `AUDIENCES` 의 `v` 값 그대로).
+  섹션 토글 4개는 `WebsiteHome` 의 섹션 순서(교회소개·예배·모임 안내·소식·공지·미디어)에 대응하는 `show_intro/worship/news/media`.
+- **소그룹은 `gh_church_timetable` 에 `category='group'` 으로 넣지 않고 별도 테이블**로 뒀다. timetable 은 앱웹 예배 안내와 교적 출석 화면이
+  그대로 읽기 때문에 소그룹이 예배 목록·출석 대상에 섞여 노출되는 것을 피하기 위함. `description`/`note` 컬럼명은 timetable 과 맞춤.
+- **03_gh_www_api 가 읽어서 적용한다 (2026-10-26)**:
+  - `church/churchInfo` — `page_public=0` 은 소속 성도(gh_account.church_no)만, `audience` 는 public=누구나 / members-only=로그인 회원 / church-only·invite-only=소속 성도만
+    (초대 링크 기능이 없어 invite-only 는 church-only 와 같이 처리). 거부 시 `success:false, restricted:true, reason, result_code:-403`. 소속 성도 외에는 `show_*=0` 섹션 데이터를 비움.
+  - `church/search` · `regionList` · `churchList(action 14)` — `search_internal=0` 교회 제외. `listByBounds` · `nearbyList` · `churchList(action 15)` — `search_internal=0` 또는 `search_map=0` 교회 제외.
+  - 미적용: `search_external`(외부 검색엔진 노출 — SEO/robots·sitemap 이 없어 반영할 곳 없음), 우리교회 홈(`church-home/*`, 소속 성도 전용이라 대상 아님).
+
+```sql
+-- docs/30_church_page_setting_small_group.sql 참조 (CREATE TABLE gh_church_page_setting / gh_church_small_group)
+```
+
+확인 쿼리:
+
+```sql
+SHOW TABLES LIKE 'gh_church_page_setting';
+SHOW TABLES LIKE 'gh_church_small_group';
+```
