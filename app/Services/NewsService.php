@@ -10,6 +10,7 @@ use App\Helpers\JwtHelper;
 use App\Helpers\LogHelper;
 use App\Repositories\ChurchBoardRepository;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 /**
