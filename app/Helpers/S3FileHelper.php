@@ -41,7 +41,9 @@ class S3FileHelper
             $file->move($destinationPath, $hashedName);
         } catch (\Throwable $e) {
             // 서버의 public/uploads 쓰기 권한 문제가 원인인 경우 로그로 구분
-            LogHelper::logWrite("[S3FileHelper] local move error ({$destinationPath}): " . $e->getMessage(), "file");
+            $runUser = function_exists('posix_geteuid') ? (posix_getpwuid(posix_geteuid())['name'] ?? '?') : get_current_user();
+            $writable = is_writable($destinationPath) ? 'Y' : 'N';
+            LogHelper::logWrite("[S3FileHelper] local move error ({$destinationPath}, writable={$writable}, user={$runUser}): " . $e->getMessage(), "file");
             throw new \RuntimeException('UPLOAD_FAILED');
         }
 
@@ -58,7 +60,7 @@ class S3FileHelper
             $client->headObject(['Bucket' => FileUploadConstants::S3_BUCKET, 'Key' => $s3Key]);
         } catch (\Throwable $e) {
             @unlink($localPath);
-            LogHelper::logWrite("[S3FileHelper] upload error: " . $e->getMessage(), "file");
+            LogHelper::logWrite("[S3FileHelper] upload error (" . get_class($e) . ", key={$s3Key}): " . $e->getMessage(), "file");
             throw new \RuntimeException('UPLOAD_FAILED');
         }
 

@@ -56,6 +56,7 @@ class MediaRequest extends FormRequest
         return [
             'content_no' => 'ID',
             'title'      => '제목',
+            'video_url'  => '영상 URL',
         ];
     }
 
@@ -86,7 +87,7 @@ class MediaRequest extends FormRequest
     {
         return [
             'title'     => ['required', 'string', 'max:100'],
-            'video_url' => ['nullable', 'string', 'max:400'],
+            'video_url' => ['required', 'string', 'max:400'],
             'speaker'   => ['nullable', 'string', 'max:50'],
             'verse'     => ['nullable', 'string', 'max:100'],
             'series'    => ['nullable', 'string', 'max:100'],
@@ -102,7 +103,7 @@ class MediaRequest extends FormRequest
         return [
             'content_no' => ['required', 'integer', 'min:1'],
             'title'      => ['sometimes', 'string', 'max:100'],
-            'video_url'  => ['sometimes', 'nullable', 'string', 'max:400'],
+            'video_url'  => ['sometimes', 'required', 'string', 'max:400'],
             'speaker'    => ['sometimes', 'nullable', 'string', 'max:50'],
             'verse'      => ['sometimes', 'nullable', 'string', 'max:100'],
             'series'     => ['sometimes', 'nullable', 'string', 'max:100'],
