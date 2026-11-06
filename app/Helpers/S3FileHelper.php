@@ -52,12 +52,12 @@ class S3FileHelper
         try {
             $client = self::makeClient();
             $result = $client->putObject([
-                'Bucket'     => FileUploadConstants::S3_BUCKET,
+                'Bucket'     => \App\Helpers\ObjectStorage::bucket(),
                 'Key'        => $s3Key,
                 'SourceFile' => $localPath,
             ]);
             $s3Url = $result['ObjectURL'] ?? null;
-            $client->headObject(['Bucket' => FileUploadConstants::S3_BUCKET, 'Key' => $s3Key]);
+            $client->headObject(['Bucket' => \App\Helpers\ObjectStorage::bucket(), 'Key' => $s3Key]);
         } catch (\Throwable $e) {
             @unlink($localPath);
             LogHelper::logWrite("[S3FileHelper] upload error (" . get_class($e) . ", key={$s3Key}): " . $e->getMessage(), "file");
@@ -89,7 +89,7 @@ class S3FileHelper
     {
         try {
             self::makeClient()->deleteObject([
-                'Bucket' => FileUploadConstants::S3_BUCKET,
+                'Bucket' => \App\Helpers\ObjectStorage::bucket(),
                 'Key'    => $s3Key,
             ]);
         } catch (\Throwable $e) {
@@ -99,20 +99,11 @@ class S3FileHelper
 
     public static function extractS3KeyFromUrl(string $url): ?string
     {
-        $parsed = parse_url($url);
-        return isset($parsed['path']) ? ltrim($parsed['path'], '/') : null;
+        return \App\Helpers\ObjectStorage::keyFromUrl($url);
     }
 
     private static function makeClient(): \Aws\S3\S3Client
     {
-        return new \Aws\S3\S3Client([
-            'version'     => 'latest',
-            'region'      => config('filesystems.disks.s3.region'),
-            'credentials' => [
-                'key'    => config('filesystems.disks.s3.key'),
-                'secret' => config('filesystems.disks.s3.secret'),
-            ],
-            'scheme'      => 'http',
-        ]);
+        return \App\Helpers\ObjectStorage::client('http');
     }
 }
