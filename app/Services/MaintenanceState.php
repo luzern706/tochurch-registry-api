@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\IpUtils;
 
 /**
- * 서비스 점검 모드 상태 (gh_service_maintenance, 단일 행 id=1).
+ * 서비스 점검 모드 상태 (gh_service_maintenance, 교적 = id 2. 앱웹(03)은 id 1 을 읽는다).
  *
- * 관리자(02_gh_admin_api)가 저장하고, 앱웹(03)·교적(04) API 가 같은 DB 에서 읽는다.
+ * 관리자(02_gh_admin_api)가 서비스별로 저장하고, 앱웹(03)·교적(04) API 가 같은 DB 에서 각자의 행을 읽는다.
  * 매 요청마다 DB 를 치지 않도록 CACHE_SECONDS 동안 캐시한다 → 토글 후 최대 이 시간 안에 반영.
  * 조회에 실패하면(테이블 미생성·DB 장애) 점검 아님으로 간주한다(fail-open) — 점검 기능 때문에 서비스가 멎으면 안 된다.
  */
@@ -17,6 +17,9 @@ class MaintenanceState
 {
     private const CACHE_KEY = 'service_maintenance_state';
     private const CACHE_SECONDS = 5;
+
+    /** gh_service_maintenance 에서 교적 서비스의 행 */
+    private const ROW_ID = 2;
 
     /** 점검 중에도 통과시킬 경로 (프론트가 점검 여부를 확인하는 공개 엔드포인트) */
     public const STATUS_PATH = 'api/maintenance/status';
@@ -34,7 +37,7 @@ class MaintenanceState
             ];
 
             try {
-                $row = DB::table('gh_service_maintenance')->where('id', 1)->first();
+                $row = DB::table('gh_service_maintenance')->where('id', self::ROW_ID)->first();
             } catch (\Throwable $e) {
                 return $state;
             }
