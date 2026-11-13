@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\FinanceAccountController;
 use App\Http\Controllers\Api\FinanceReportController;
 use App\Http\Controllers\Api\FinanceSettingController;
 use App\Http\Controllers\Api\IntroController;
+use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\MemberJoinRequestController;
 use App\Http\Controllers\Api\MediaController;
@@ -48,6 +49,9 @@ use Illuminate\Support\Facades\Route;
 | 권한 매트릭스 대상이 아니라 jwt.auth/super.auth만 적용.
 |
 */
+
+// 서비스 점검 상태 (공개) — 점검 중에도 ServiceMaintenance 미들웨어가 통과시키는 유일한 엔드포인트
+Route::get('/maintenance/status', [MaintenanceController::class, 'status']);
 
 // 인증 (로그인은 jwt.auth 제외)
 Route::prefix('v4/auth')->group(function () {
