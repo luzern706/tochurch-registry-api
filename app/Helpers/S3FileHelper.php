@@ -55,8 +55,8 @@ class S3FileHelper
                 'Bucket'     => \App\Helpers\ObjectStorage::bucket(),
                 'Key'        => $s3Key,
                 'SourceFile' => $localPath,
-            ]);
-            $s3Url = $result['ObjectURL'] ?? null;
+            ] + \App\Helpers\ObjectStorage::contentOptions($s3Key));
+            $s3Url = \App\Helpers\ObjectStorage::objectUrl($s3Key, $result['ObjectURL'] ?? null);
             $client->headObject(['Bucket' => \App\Helpers\ObjectStorage::bucket(), 'Key' => $s3Key]);
         } catch (\Throwable $e) {
             @unlink($localPath);

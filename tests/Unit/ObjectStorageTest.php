@@ -19,8 +19,93 @@ class ObjectStorageTest extends TestCase
             'filesystems.disks.s3.region'   => 'us-east-1',
             'filesystems.disks.s3.bucket'   => self::BUCKET,
             'filesystems.disks.s3.endpoint' => null,
+            'filesystems.disks.s3.url'      => null,
             'filesystems.disks.s3.use_path_style_endpoint' => false,
         ]);
+    }
+
+    private const NHN_BASE = 'https://storage.example.test/v1/AUTH_sample/sample-container';
+
+    private function useNhn(?string $url = self::NHN_BASE): void
+    {
+        config([
+            'filesystems.disks.s3.endpoint' => 'https://storage.example.test',
+            'filesystems.disks.s3.use_path_style_endpoint' => true,
+            'filesystems.disks.s3.url' => $url,
+        ]);
+    }
+
+    public function test_object_url_returns_sdk_url_for_aws(): void
+    {
+        // AWS_URL 이 있어도 AWS_ENDPOINT 가 없으면 기존 동작(SDK ObjectURL)을 유지한다
+        config(['filesystems.disks.s3.url' => 'https://ignored.example.test']);
+        $sdk = 'https://' . self::BUCKET . '.s3.us-east-1.amazonaws.com/uploads/a.png';
+
+        $this->assertNull(ObjectStorage::publicBaseUrl());
+        $this->assertSame($sdk, ObjectStorage::objectUrl('uploads/a.png', $sdk));
+    }
+
+    public function test_object_url_uses_public_base_url_in_nhn_mode(): void
+    {
+        $this->useNhn(self::NHN_BASE . '/');   // 끝의 / 는 무시된다
+
+        $this->assertSame(self::NHN_BASE, ObjectStorage::publicBaseUrl());
+        $this->assertSame(
+            self::NHN_BASE . '/uploads/a.png',
+            ObjectStorage::objectUrl('uploads/a.png', 'https://storage.example.test/' . self::BUCKET . '/uploads/a.png')
+        );
+    }
+
+    public function test_object_url_encodes_each_key_segment(): void
+    {
+        $this->useNhn();
+
+        $this->assertSame(
+            self::NHN_BASE . '/uploads/%ED%95%9C%20%EA%B8%80.png',
+            ObjectStorage::objectUrl('uploads/한 글.png')
+        );
+    }
+
+    public function test_object_url_falls_back_to_sdk_url_when_nhn_has_no_public_base_url(): void
+    {
+        $this->useNhn(null);
+        $sdk = 'https://storage.example.test/' . self::BUCKET . '/uploads/a.png';
+
+        $this->assertNull(ObjectStorage::publicBaseUrl());
+        $this->assertSame($sdk, ObjectStorage::objectUrl('uploads/a.png', $sdk));
+    }
+
+    public function test_key_from_public_base_url_in_nhn_mode(): void
+    {
+        $this->useNhn();
+
+        $this->assertSame('uploads/a.png', ObjectStorage::keyFromUrl(self::NHN_BASE . '/uploads/a.png'));
+        $this->assertSame('uploads/한 글.png', ObjectStorage::keyFromUrl(self::NHN_BASE . '/uploads/%ED%95%9C%20%EA%B8%80.png'));
+        $this->assertSame('uploads/a.png', ObjectStorage::keyFromUrl(self::NHN_BASE . '/uploads/a.png?x=1'));
+    }
+
+    public function test_key_from_object_url_round_trips(): void
+    {
+        $this->useNhn();
+
+        $key = 'uploads/06/2026/한 글 파일.png';
+        $this->assertSame($key, ObjectStorage::keyFromUrl(ObjectStorage::objectUrl($key)));
+    }
+
+    public function test_key_from_other_host_url_is_not_treated_as_public_base_url(): void
+    {
+        // 옛 TOAST 주소는 공개 기본 URL 로 시작하지 않으므로 새 컨테이너 키로 오인하지 않는다
+        $this->useNhn();
+        $url = 'https://old.example.test/v1/AUTH_oldtenant/ghstorage/uploads/a.png';
+
+        $this->assertSame('v1/AUTH_oldtenant/ghstorage/uploads/a.png', ObjectStorage::keyFromUrl($url));
+    }
+
+    public function test_key_is_null_for_public_base_url_without_key(): void
+    {
+        $this->useNhn();
+
+        $this->assertNull(ObjectStorage::keyFromUrl(self::NHN_BASE . '/'));
     }
 
     public function test_bucket_falls_back_to_default_when_not_configured(): void
@@ -83,5 +168,17 @@ class ObjectStorageTest extends TestCase
 
         $this->assertSame('storage.example.test', $client->getEndpoint()->getHost());
         $this->assertSame('sample-region', $client->getRegion());
+    }
+
+    public function test_content_options_guess_type_from_key_extension(): void
+    {
+        $this->assertSame(['ContentType' => 'image/png'], ObjectStorage::contentOptions('uploads/a.png'));
+        $this->assertSame(['ContentType' => 'image/jpeg'], ObjectStorage::contentOptions('uploads/한글 사진.JPG'));
+        $this->assertSame(['ContentType' => 'application/pdf'], ObjectStorage::contentOptions('docs/a.pdf'));
+    }
+
+    public function test_content_options_empty_when_type_unknown(): void
+    {
+        $this->assertSame([], ObjectStorage::contentOptions('uploads/noext'));
     }
 }
