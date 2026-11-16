@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\FinanceReportController;
 use App\Http\Controllers\Api\FinanceSettingController;
 use App\Http\Controllers\Api\IntroController;
 use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\Api\MemberCertController;
 use App\Http\Controllers\Api\MemberJoinRequestController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MessageController;
@@ -141,6 +142,14 @@ Route::prefix('v4/member')->middleware(['jwt.auth', 'permission:MEMBER'])->group
     Route::post('/holdJoinRequest',    [MemberJoinRequestController::class, 'holdJoinRequest']);
     Route::post('/rejectJoinRequest',  [MemberJoinRequestController::class, 'rejectJoinRequest']);
     Route::post('/approveInviteJoin',  [MemberJoinRequestController::class, 'approveInviteJoin']); // 초대 링크 가입 → 초대 교적 연결(관리자 확인)
+});
+
+// 성도 인증 (소속 성도 승인/거절/일괄 승인 — 무료 메뉴: 교적·재정 신청 전 교회도 사용)
+Route::prefix('v4/memberCert')->middleware(['jwt.auth', 'permission:MEMBER_CERT,free'])->group(function () {
+    Route::post('/getList', [MemberCertController::class, 'getList']);
+    Route::post('/approve', [MemberCertController::class, 'approve']);
+    Route::post('/reject',  [MemberCertController::class, 'reject']);
+    Route::post('/reset',   [MemberCertController::class, 'reset']);
 });
 
 // 조직 사이드바 트리 (좌측 메뉴 그룹 목록 — 전 역할 공통 노출, SETTING 권한과 무관)

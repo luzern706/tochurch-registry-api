@@ -87,6 +87,9 @@ class AuditMenuCode
     /** 교적·재정 서비스 신청 (서비스 권한이 없는 관리자의 안내 페이지) */
     const SERVICE_APPLICATION = 'SERVICE_APPLICATION';
 
+    /** 관리 > 성도 인증 (소속 성도 승인/거절 — 무료 메뉴) */
+    const MEMBER_CERT = 'MEMBER_CERT';
+
     /**
      * 메뉴 코드의 한글 라벨 (관리자 화면 표시용)
      */
@@ -119,6 +122,7 @@ class AuditMenuCode
             self::FINANCE_SETTING => '설정',
             self::WEBSITE         => '교회 페이지',
             self::SERVICE_APPLICATION => '서비스 신청',
+            self::MEMBER_CERT         => '성도 인증',
         ];
         return $labels[$code] ?? $code;
     }
@@ -155,6 +159,7 @@ class AuditMenuCode
             self::FINANCE_SETTING,
             self::WEBSITE,
             self::SERVICE_APPLICATION,
+            self::MEMBER_CERT,
         ];
     }
 }

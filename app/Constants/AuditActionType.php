@@ -62,6 +62,10 @@ class AuditActionType
     /** 반려 (교적 연동 대기 목록에서 반려 처리) */
     const REJECT = 'REJECT';
 
+    // ========== 성도 인증 ==========
+    /** 승인 (성도 인증 승인 — 일괄 승인은 한 건으로 기록) */
+    const APPROVE = 'APPROVE';
+
     /**
      * 액션 타입의 한글 라벨 (관리자 화면 표시용)
      */
@@ -83,6 +87,7 @@ class AuditActionType
             self::ACTIVATE    => '활성화',
             self::HOLD        => '보류',
             self::REJECT      => '반려',
+            self::APPROVE     => '승인',
         ];
         return $labels[$action] ?? $action;
     }
@@ -108,6 +113,7 @@ class AuditActionType
             self::ACTIVATE,
             self::HOLD,
             self::REJECT,
+            self::APPROVE,
         ];
     }
 }
