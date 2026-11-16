@@ -59,7 +59,7 @@ class IntroRepository
 
     public function updatePastor(int $pastorNo, array $data): void
     {
-        $data = array_intersect_key($data, array_flip(['name', 'type_no', 'career', 'thumbnail']));
+        $data = array_intersect_key($data, array_flip(['name', 'name_en', 'type_no', 'career', 'thumbnail']));
         if (empty($data)) {
             return;
         }

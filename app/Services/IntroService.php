@@ -74,6 +74,7 @@ class IntroService
                 $pastorData = [
                     'pastor_no'  => (int) $headPastor->pastor_no,
                     'name'       => $headPastor->name,
+                    'name_en'    => $headPastor->name_en ?? null,
                     'type_no'    => $headPastor->type_no !== null ? (int) $headPastor->type_no : null,
                     'type_value' => $typeMap[$headPastor->type_no] ?? null,
                     'career'     => $this->decodeJson($headPastor->career ?? null, []),

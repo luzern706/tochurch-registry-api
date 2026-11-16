@@ -92,6 +92,7 @@ class PermissionMenuTree
                 'key' => 'management', 'label' => '관리',
                 'menus' => [
                     self::menu(AuditMenuCode::WEBSITE, []),
+                    self::menu(AuditMenuCode::MEMBER_CERT, []),
                 ],
             ],
         ];

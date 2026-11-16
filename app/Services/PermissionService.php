@@ -50,11 +50,20 @@ class PermissionService
     /** 소메뉴(페이지) 코드의 접근 여부 — 오버라이드가 없으면 소속 중메뉴의 기본 정책 사용 */
     private function resolvePageAccess(string $role, string $pageCode, array $overrides): bool
     {
+        if ($role !== 'admin' && $this->isAdminOnlyPage($pageCode)) {
+            return false;
+        }
         if (array_key_exists($pageCode, $overrides)) {
             return $overrides[$pageCode];
         }
         $parentMenu = PermissionMenuTree::parentOf($pageCode) ?? $pageCode;
         return PermissionDefaults::forRole($role, $parentMenu);
+    }
+
+    /** 교회 관리자(admin) 전용 메뉴의 소메뉴인지 — 그렇다면 admin 외 역할은 오버라이드와 무관하게 접근 불가 */
+    private function isAdminOnlyPage(string $pageCode): bool
+    {
+        return in_array(PermissionMenuTree::parentOf($pageCode) ?? $pageCode, ServiceAccessPolicy::ADMIN_ONLY_MENUS, true);
     }
 
     public function getMatrix(int $churchId): JsonResponse
@@ -116,6 +125,9 @@ class PermissionService
 
                 if ($this->isFreeTierAdmin($adminNo)) {
                     foreach (ServiceAccessPolicy::FREE_MENUS as $menuCode) {
+                        if (in_array($menuCode, ServiceAccessPolicy::ADMIN_ONLY_MENUS, true)) {
+                            continue; // 교회 관리자 전용 무료 메뉴는 admin 외 역할에 열어주지 않음
+                        }
                         foreach (PermissionMenuTree::pagesOfMenu($menuCode) as $pageCode) {
                             $permissions[$pageCode] = true;
                         }
@@ -146,6 +158,10 @@ class PermissionService
         $pageCodes = PermissionMenuTree::pagesOfMenu($menuCode);
         if (empty($pageCodes)) {
             return false;
+        }
+
+        if (in_array($menuCode, ServiceAccessPolicy::ADMIN_ONLY_MENUS, true)) {
+            return false; // admin 은 위에서 이미 통과 — 그 외 역할은 교회 관리자 전용 메뉴 접근 불가
         }
 
         if (in_array($menuCode, ServiceAccessPolicy::FREE_MENUS, true) && $this->isFreeTierAdmin($adminNo)) {

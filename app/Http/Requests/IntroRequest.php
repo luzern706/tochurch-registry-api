@@ -47,6 +47,7 @@ class IntroRequest extends FormRequest
             ],
             'updatePastor' => [
                 'name'    => ['sometimes', 'string', 'max:50'],
+                'name_en' => ['sometimes', 'nullable', 'string', 'max:100'],
                 'type_no' => ['sometimes', 'nullable', 'integer', 'min:0'],
                 'career'  => ['sometimes', 'nullable', 'array', 'max:20'],
                 'career.*' => ['string', 'max:200'],

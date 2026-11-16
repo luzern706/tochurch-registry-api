@@ -2,7 +2,7 @@
 
 ## 프로젝트 개요
 - 서비스명: 교적 관리 시스템 (교회로 연동)
-- 스택: Laravel 10, PHP 8.1, MariaDB 10.11
+- 스택: Laravel 12, PHP 8.3, MariaDB 10.11
 - 프론트: React (별도 저장소: 04_gh_registry_front)
 - 참고: 기존 관리자 API (02_gh_admin_api) V4 패턴 동일하게 유지
 
