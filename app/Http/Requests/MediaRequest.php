@@ -9,6 +9,9 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 
 class MediaRequest extends FormRequest
 {
+    /** 설교 분류 — 앱(설교영상 상단 탭·카드 칩)이 category1 값으로 필터링하는 이름과 동일해야 한다. */
+    private const SERMON_CATEGORIES = '주일설교,수요설교,금요설교,특별설교';
+
     public function authorize(): bool
     {
         return true;
@@ -93,6 +96,8 @@ class MediaRequest extends FormRequest
             'series'    => ['nullable', 'string', 'max:100'],
             'tags'      => ['nullable', 'array', 'max:10'],
             'tags.*'    => ['string', 'max:20'],
+            'category'  => ['nullable', 'string', 'in:' . self::SERMON_CATEGORIES],
+            'worship'   => ['nullable', 'string', 'max:30'],
             'date'      => ['nullable', 'date'],
             'is_top'    => ['nullable', 'boolean'],
         ];
@@ -109,6 +114,8 @@ class MediaRequest extends FormRequest
             'series'     => ['sometimes', 'nullable', 'string', 'max:100'],
             'tags'       => ['sometimes', 'array', 'max:10'],
             'tags.*'     => ['string', 'max:20'],
+            'category'   => ['sometimes', 'nullable', 'string', 'in:' . self::SERMON_CATEGORIES],
+            'worship'    => ['sometimes', 'nullable', 'string', 'max:30'],
             'date'       => ['sometimes', 'nullable', 'date'],
             'is_top'     => ['sometimes', 'boolean'],
         ];

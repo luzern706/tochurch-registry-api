@@ -98,6 +98,8 @@ class MediaService
                 'str_val2'   => $input['verse'] ?? null,
                 'str_val3'   => $input['series'] ?? null,
                 'str_val4'   => isset($input['tags']) ? implode(',', $input['tags']) : null,
+                'category1'  => $input['category'] ?? null,
+                'category2'  => $input['worship'] ?? null,
                 'is_top'     => !empty($input['is_top']) ? 'Y' : 'N',
             ];
             if (!empty($input['date'])) $data['registered'] = $input['date'];
@@ -119,15 +121,18 @@ class MediaService
     public function updateSermon(int $authMemberId, int $contentNo, array $input): JsonResponse
     {
         return $this->genericUpdate($authMemberId, $contentNo, $input,
-            ['title', 'video_url', 'speaker', 'verse', 'series', 'tags', 'is_top', 'date'], '설교 영상',
+            ['title', 'video_url', 'speaker', 'verse', 'series', 'tags', 'category', 'worship', 'is_top', 'date'], '설교 영상',
             function ($v) {
-                if (isset($v['video_url'])) { $v['youtubeUrl'] = $v['video_url']; unset($v['video_url']); }
-                if (isset($v['speaker'])) { $v['str_val1'] = $v['speaker']; unset($v['speaker']); }
-                if (isset($v['verse'])) { $v['str_val2'] = $v['verse']; unset($v['verse']); }
-                if (isset($v['series'])) { $v['str_val3'] = $v['series']; unset($v['series']); }
-                if (isset($v['tags'])) { $v['str_val4'] = implode(',', $v['tags']); unset($v['tags']); }
+                // 입력 칸을 비우면 null 이 오는데 isset() 은 null 을 건너뛰어 컬럼이 아닌 키가 그대로 UPDATE 에 들어가므로 array_key_exists 로 판정한다.
+                if (array_key_exists('video_url', $v)) { $v['youtubeUrl'] = $v['video_url']; unset($v['video_url']); }
+                if (array_key_exists('speaker', $v)) { $v['str_val1'] = $v['speaker']; unset($v['speaker']); }
+                if (array_key_exists('verse', $v)) { $v['str_val2'] = $v['verse']; unset($v['verse']); }
+                if (array_key_exists('series', $v)) { $v['str_val3'] = $v['series']; unset($v['series']); }
+                if (array_key_exists('tags', $v)) { $v['str_val4'] = $v['tags'] === null ? null : implode(',', $v['tags']); unset($v['tags']); }
+                if (array_key_exists('category', $v)) { $v['category1'] = $v['category']; unset($v['category']); }
+                if (array_key_exists('worship', $v)) { $v['category2'] = $v['worship']; unset($v['worship']); }
                 if (isset($v['is_top'])) $v['is_top'] = $v['is_top'] ? 'Y' : 'N';
-                if (isset($v['date'])) { $v['registered'] = $v['date']; unset($v['date']); }
+                if (array_key_exists('date', $v)) { if ($v['date'] !== null) $v['registered'] = $v['date']; unset($v['date']); } // registered 는 NOT NULL
                 return $v;
             });
     }
