@@ -377,3 +377,20 @@ SHOW COLUMNS FROM gh_church_intro LIKE 'vision';
 SHOW TABLES LIKE 'gh_church_page_setting';
 SHOW TABLES LIKE 'gh_church_small_group';
 ```
+
+---
+
+## [2026-11-16] gh_church_pastor: name_en(영문 이름) 컬럼 추가
+
+✅ **스테이징(NHN gyohyero_dev) 2026-11-16 적용 완료** · 운영·로컬은 미적용. 상세 SQL·배포 순서는 [20_gh_church_pastor_name_en.sql](20_gh_church_pastor_name_en.sql).
+
+```sql
+ALTER TABLE `gh_church_pastor`
+  ADD COLUMN `name_en` VARCHAR(100) NULL DEFAULT NULL COMMENT '목회자 영문 이름(예: Rev. Deokbong Lee) — 교회소개 담임목사 카드 표시용' AFTER `name`;
+```
+
+확인 쿼리:
+
+```sql
+SHOW COLUMNS FROM gh_church_pastor LIKE 'name_en';
+```
