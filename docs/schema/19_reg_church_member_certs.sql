@@ -18,6 +18,10 @@
 --   자동으로 "인증 없음"으로 판정된다. 앱 API(교회 변경 성공 시)가 이전 행도 삭제해서
 --   이전 교회로 되돌아왔을 때 예전 승인이 되살아나지 않게 한다.
 --
+-- ※ 2026-11-16 변경(21_reg_church_member_certs_released.sql): 교회 변경 시 이전 승인 행을 삭제하지 않고
+--    status='released'(교회 변경으로 해제)로 남기며, 유니크 키를 (account_no, church_id)로 바꿨다.
+--    위 "계정당 1행/이전 행도 삭제" 설명은 이 변경 이전의 동작이다.
+--
 -- 연결 구조:
 --   gh_account.account_no  ← 교회로 계정 (공유 테이블, 스키마 변경 없음)
 --   church_id              ← gh_account.church_no (처리 시점의 교회)

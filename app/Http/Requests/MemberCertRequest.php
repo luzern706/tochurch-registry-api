@@ -18,7 +18,7 @@ class MemberCertRequest extends FormRequest
     {
         return match ($this->route()?->getActionMethod()) {
             'getList' => [
-                'status'  => ['nullable', 'string', 'in:pending,approved,rejected'],
+                'status'  => ['nullable', 'string', 'in:pending,approved,rejected,released'],
                 'keyword' => ['nullable', 'string', 'max:100'],
                 'page'    => ['nullable', 'integer', 'min:1'],
                 'size'    => ['nullable', 'integer', 'min:1', 'max:100'],
