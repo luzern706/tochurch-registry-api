@@ -6,11 +6,11 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * 성도 인증 — 내 교회를 출석교회로 선택한 교회로 회원(gh_account)의 승인/거절 처리.
- * docs/schema/19_reg_church_member_certs.sql, 21_reg_church_member_certs_released.sql 참조 —
- * 테이블에는 승인/거절/해제 결과를 (계정·교회)당 1행으로 저장하고 "대기"는
- * (내 교회 소속인데 현재 교회 기준 승인·거절 행이 없는 계정)으로 실시간 계산한다.
- * 행의 church_id 가 gh_account.church_no 와 다르면(성도가 교회를 바꿈) 처리 결과는 무효이고,
- * 앱 API 가 교회 변경 시 이전 교회의 승인 행을 'released'(교회 변경으로 해제)로 바꿔 남긴다.
+ * docs/schema/19_reg_church_member_certs.sql, 21_..._released.sql, 22_reg_church_member_cert_events.sql 참조 —
+ * reg_church_member_certs 에는 「현재 교회 기준」 승인/거절 결과를 (계정·교회)당 1행으로 저장하고
+ * "대기"는 (내 교회 소속인데 현재 교회 기준 승인·거절 행이 없는 계정)으로 실시간 계산한다.
+ * 성도가 교회를 바꾸면 앱 API 가 이전 교회의 승인 행을 지우고 해제(released)·신청 취소(canceled) 이력을
+ * reg_church_member_cert_events 에 쌓는다 — 「해제」 탭은 이 이력을 보여 주며, 성도가 돌아와도 지워지지 않는다.
  */
 class MemberCertRepository
 {
@@ -27,17 +27,16 @@ class MemberCertRepository
     }
 
     /**
-     * 「해제」 목록용 — 내 교회에서 인증이 교회 변경으로 풀린 성도(released 행).
-     * 지금 내 교회로 돌아와 있는 성도는 인증 대기로 다시 시작하므로 제외한다.
+     * 「해제」 목록용 — 내 교회에서 있었던 인증 해제·신청 취소 이력(reg_church_member_cert_events).
+     * 지금 내 교회로 돌아와 있는 성도의 이력도 지우지 않고 남긴다(returned 로 구분).
      */
-    private function releasedQuery(int $churchId)
+    private function eventsQuery(int $churchId)
     {
-        return DB::table('reg_church_member_certs as c')
-            ->join('gh_account as a', 'a.account_no', '=', 'c.account_no')
-            ->where('c.church_id', $churchId)
-            ->where('c.status', 'released')
-            ->where('a.status', 'ALIVE')
-            ->where('a.church_no', '<>', $churchId);
+        return DB::table('reg_church_member_cert_events as e')
+            ->join('gh_account as a', 'a.account_no', '=', 'e.account_no')
+            ->leftJoin('gh_church as mc', 'mc.church_no', '=', 'e.moved_to_church_id')
+            ->where('e.church_id', $churchId)
+            ->where('a.status', 'ALIVE');
     }
 
     public function getList(int $churchId, array $filters): array
@@ -49,8 +48,14 @@ class MemberCertRepository
         ];
 
         if ($status === 'released') {
-            $query = $this->releasedQuery($churchId);
-            $orderBy = 'c.updated_at';
+            $query = $this->eventsQuery($churchId);
+            $orderBy = 'e.created_at';
+            $select = [
+                'e.id as event_id', 'a.account_no', 'a.name', 'a.phone', 'a.email', 'a.church_job', 'a.registered',
+                'e.event_type', 'e.reason', 'e.created_at as processed_at',
+                'e.moved_to_church_id', 'mc.name as moved_to_church_name',
+                DB::raw('(a.church_no = e.church_id) as returned'),
+            ];
         } else {
             $query = $this->baseQuery($churchId);
             match ($status) {
@@ -94,11 +99,18 @@ class MemberCertRepository
         $approved = (int) ($row->approved ?? 0);
         $rejected = (int) ($row->rejected ?? 0);
 
+        // 이력 테이블(22번 SQL)이 아직 없는 환경에서도 나머지 탭 건수는 나오게 한다
+        try {
+            $released = $this->eventsQuery($churchId)->count(); // 해제 + 신청 취소 이력
+        } catch (\Throwable $e) {
+            $released = 0;
+        }
+
         return [
-            'pending'  => $total - $approved - $rejected, // released 행(해제 후 복귀)은 승인·거절이 아니므로 대기에 포함
+            'pending'  => $total - $approved - $rejected, // released 행(예전 방식)은 승인·거절이 아니므로 대기에 포함
             'approved' => $approved,
             'rejected' => $rejected,
-            'released' => $this->releasedQuery($churchId)->count(),
+            'released' => $released,
         ];
     }
 
