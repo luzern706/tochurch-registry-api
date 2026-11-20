@@ -30,6 +30,7 @@ class IntroRequest extends FormRequest
                 'intro_title'       => ['sometimes', 'nullable', 'string', 'max:200'],
                 'welcome_title'     => ['sometimes', 'nullable', 'string', 'max:100'],
                 'welcome_highlight' => ['sometimes', 'nullable', 'string', 'max:200'],
+                'weekly_prayer'     => ['sometimes', 'nullable', 'string', 'max:100'],
                 'bible_quote'       => ['sometimes', 'nullable', 'array'],
                 'bible_quote.mode'        => ['nullable', 'string', 'in:select,manual'],
                 'bible_quote.book'        => ['nullable', 'string', 'max:20'],
