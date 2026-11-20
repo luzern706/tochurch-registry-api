@@ -218,6 +218,7 @@ Route::prefix('v4/news')->middleware(['jwt.auth', 'permission:WEBSITE'])->group(
     Route::post('/qna/update',   [NewsController::class, 'qnaUpdate']);
     Route::post('/qna/delete',   [NewsController::class, 'qnaDelete']);
     Route::post('/qna/answer',   [NewsController::class, 'qnaAnswer']);
+    Route::post('/qna/answerDelete', [NewsController::class, 'qnaAnswerDelete']);
 
     Route::post('/counseling/getList',   [NewsController::class, 'counselingGetList']);
     Route::post('/counseling/getDetail', [NewsController::class, 'counselingGetDetail']);

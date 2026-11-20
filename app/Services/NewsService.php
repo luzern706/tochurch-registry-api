@@ -67,6 +67,9 @@ class NewsService
                 'title' => $input['title'],
                 'content' => $input['content'] ?? '',
                 'is_top' => !empty($input['is_top']) ? 'Y' : 'N',
+                // 앱 교회소식 카드 배경·상세 상단 이미지(rep_img)와 분류 탭(안내/행사/소식, category1)
+                'rep_img' => !empty($input['cover_url']) ? $input['cover_url'] : null,
+                'category1' => !empty($input['category']) ? $input['category'] : null,
             ];
             $newId = $this->boardRepository->insert($data);
 
@@ -84,8 +87,11 @@ class NewsService
 
     public function updateNews(int $authMemberId, int $contentNo, array $input): JsonResponse
     {
-        return $this->genericUpdate($authMemberId, $contentNo, $input, ['title', 'content', 'is_top'], '교회 소식', function ($v) {
+        return $this->genericUpdate($authMemberId, $contentNo, $input, ['title', 'content', 'is_top', 'cover_url', 'category'], '교회 소식', function ($v) {
             if (isset($v['is_top'])) $v['is_top'] = $v['is_top'] ? 'Y' : 'N';
+            // 빈 값은 NULL 로 저장해 앱에서 사진·분류가 없는 글로 취급되게 한다.
+            if (array_key_exists('cover_url', $v)) { $v['rep_img'] = $v['cover_url'] ?: null; unset($v['cover_url']); }
+            if (array_key_exists('category', $v)) { $v['category1'] = $v['category'] ?: null; unset($v['category']); }
             return $v;
         });
     }
@@ -269,6 +275,32 @@ class NewsService
         } catch (\Exception $e) {
             LogHelper::logWrite("[NewsService] answerQna error: " . $e->getMessage(), "news");
             return ApiResponse::fail('INTERNAL_ERROR', '답변 등록 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    /** 묻고답하기 오피스 답변 삭제 — 글 자체의 text_val1 을 비운다(앱에서 「답변대기」로 돌아감). */
+    public function clearQnaAnswer(int $authMemberId, int $contentNo): JsonResponse
+    {
+        try {
+            $churchId = $this->churchId();
+            if ($churchId === null) return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+
+            $row = $this->boardRepository->getById($contentNo);
+            if (!$this->ownedByChurch($row, $churchId)) return ApiResponse::fail('NOT_FOUND', '질문을 찾을 수 없습니다.', 404);
+
+            $before = (string) ($row->text_val1 ?? '');
+            $this->boardRepository->update($contentNo, ['text_val1' => null]);
+
+            AuditLogHelper::logUpdate(
+                memberId: $authMemberId, churchId: $churchId, menuCode: AuditMenuCode::WEBSITE,
+                summary: "묻고답하기 답변 삭제: {$row->title}", targetId: (string) $contentNo, targetLabel: $row->title,
+                before: ['answer' => $before], after: ['answer' => ''], compareFields: ['answer'],
+            );
+
+            return ApiResponse::success(['content_no' => $contentNo]);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[NewsService] clearQnaAnswer error: " . $e->getMessage(), "news");
+            return ApiResponse::fail('INTERNAL_ERROR', '답변 삭제 중 오류가 발생했습니다.', 500);
         }
     }
 

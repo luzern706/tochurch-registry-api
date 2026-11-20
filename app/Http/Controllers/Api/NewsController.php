@@ -140,6 +140,13 @@ class NewsController extends Controller
         return $this->newsService->answerQna($authMemberId, (int) $validated['content_no'], $validated['comment']);
     }
 
+    public function qnaAnswerDelete(NewsRequest $request): JsonResponse
+    {
+        $authMemberId = $this->authMemberId($request);
+        if ($authMemberId === null) return ApiResponse::fail('TOKEN_INVALID', '인증이 필요합니다.', 401);
+        return $this->newsService->clearQnaAnswer($authMemberId, (int) $request->validated()['content_no']);
+    }
+
     // ── 상담 신청 ──
     public function counselingGetList(NewsRequest $request): JsonResponse
     {

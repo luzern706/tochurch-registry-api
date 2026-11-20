@@ -10,7 +10,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 class MediaRequest extends FormRequest
 {
     /** 설교 분류 — 앱(설교영상 상단 탭·카드 칩)이 category1 값으로 필터링하는 이름과 동일해야 한다. */
-    private const SERMON_CATEGORIES = '주일설교,수요설교,금요설교,특별설교';
+    private const SERMON_CATEGORIES = '주일설교,수요설교,금요설교,특별설교,기타';
 
     public function authorize(): bool
     {
