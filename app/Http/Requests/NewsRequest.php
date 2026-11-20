@@ -37,6 +37,7 @@ class NewsRequest extends FormRequest
                 'content_no' => ['required', 'integer', 'min:1'],
                 'comment'    => ['required', 'string', 'max:2000'],
             ],
+            'qnaAnswerDelete' => $this->keyRules(),
 
             'counselingUpdate' => $this->counselingUpdateRules(),
             'counselingDelete' => $this->keyRules(),
@@ -88,6 +89,8 @@ class NewsRequest extends FormRequest
             'title'   => ['required', 'string', 'max:100'],
             'content' => ['nullable', 'string', 'max:2000'],
             'is_top'  => ['nullable', 'boolean'],
+            'cover_url' => ['nullable', 'string', 'max:1000'],
+            'category'  => ['nullable', 'string', 'in:안내,행사,소식'],
         ];
     }
 
@@ -98,6 +101,8 @@ class NewsRequest extends FormRequest
             'title'      => ['sometimes', 'string', 'max:100'],
             'content'    => ['sometimes', 'nullable', 'string', 'max:2000'],
             'is_top'     => ['sometimes', 'boolean'],
+            'cover_url'  => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'category'   => ['sometimes', 'nullable', 'string', 'in:안내,행사,소식'],
         ];
     }
 
