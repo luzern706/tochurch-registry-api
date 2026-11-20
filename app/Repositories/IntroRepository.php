@@ -13,7 +13,7 @@ class IntroRepository
 {
     private const INTRO_FILLABLE = [
         'slogan', 'vision', 'message', 'hero_title', 'hero_subtitle', 'hero_buttons',
-        'intro_title', 'welcome_title', 'welcome_highlight', 'bible_quote', 'directions',
+        'intro_title', 'welcome_title', 'welcome_highlight', 'bible_quote', 'directions', 'weekly_prayer',
     ];
 
     public function getIntro(int $churchNo): ?stdClass

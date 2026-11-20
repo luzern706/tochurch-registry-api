@@ -394,3 +394,20 @@ ALTER TABLE `gh_church_pastor`
 ```sql
 SHOW COLUMNS FROM gh_church_pastor LIKE 'name_en';
 ```
+
+---
+
+## [2026-11-20] gh_church_intro: weekly_prayer(이번 주 공동 기도제목) 컬럼 추가
+
+✅ **스테이징(NHN gyohyero_dev)·운영(NHN gyohyero) 2026-11-20 적용 완료** — 상세 SQL·배포 순서는 [24_gh_church_intro_weekly_prayer.sql](24_gh_church_intro_weekly_prayer.sql).
+
+```sql
+ALTER TABLE `gh_church_intro`
+  ADD COLUMN `weekly_prayer` VARCHAR(100) NULL DEFAULT NULL COMMENT '이번 주 공동 기도제목(교회별 한 줄, 앱 기도제목 화면 상단 카드)' AFTER `directions`;
+```
+
+확인 쿼리:
+
+```sql
+SHOW COLUMNS FROM gh_church_intro LIKE 'weekly_prayer';
+```

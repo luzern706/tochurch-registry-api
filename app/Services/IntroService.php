@@ -61,6 +61,7 @@ class IntroService
                 'welcome_highlight' => $intro->welcome_highlight ?? null,
                 'bible_quote'       => $this->decodeJson($intro->bible_quote ?? null, null),
                 'directions'        => $this->decodeJson($intro->directions ?? null, []),
+                'weekly_prayer'     => $intro->weekly_prayer ?? null,
             ];
 
             $pastorTypes = $this->repository->getPastorTypes();
@@ -114,6 +115,12 @@ class IntroService
                         $data[$jsonField][$sub] = $this->normalizeQuillEmpty($data[$jsonField][$sub]);
                     }
                 }
+            }
+
+            // 이번 주 공동 기도제목 — 한 줄 텍스트, 공백뿐이면 NULL(앱에서 영역 숨김)
+            if (array_key_exists('weekly_prayer', $data)) {
+                $v = trim((string) ($data['weekly_prayer'] ?? ''));
+                $data['weekly_prayer'] = $v !== '' ? $v : null;
             }
 
             foreach (self::JSON_FIELDS as $f) {
