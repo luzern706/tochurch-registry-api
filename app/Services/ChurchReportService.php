@@ -37,6 +37,20 @@ class ChurchReportService
         return $ok;
     }
 
+    /** docs/54 의 escalated_at 칸 존재 여부 — 없으면 이관 표시는 항상 null */
+    private function hasEscalatedColumn(): bool
+    {
+        static $ok = null;
+        if ($ok === null) {
+            try {
+                $ok = Schema::hasColumn('gh_report', 'escalated_at');
+            } catch (Throwable $e) {
+                $ok = false;
+            }
+        }
+        return $ok;
+    }
+
     private function grade(?string $code): ?string
     {
         if ($code === null || $code === '') {
@@ -99,6 +113,9 @@ class ChurchReportService
             'r.church_due_at', 'r.action_type', 'r.action_reason', 'r.resolved_at', 'r.church_handled_at',
             'c.content_no', 'c.title as post_title', 'c.status as post_status', 'c.board_no', 't.name as board_name',
         ]);
+        if ($this->hasEscalatedColumn()) {
+            $q->addSelect('r.escalated_at');
+        }
         if ($tab === 'done') {
             $q->orderByDesc('r.seq');
         } else {
@@ -132,6 +149,8 @@ class ChurchReportService
                 'action_type'   => $r->action_type,
                 'action_reason' => $r->action_reason,
                 'handled_at'    => $r->church_handled_at ?: $r->resolved_at,
+                // 교회가 처리 기한(3일) 안에 처리하지 않아 운영자에게 이관된 시각(이관 건은 처리 버튼 없음)
+                'escalated_at'  => $r->escalated_at ?? null,
                 // 교회 처리 건만 처리 버튼 — 긴급(운영자 직행) 건은 열람만
                 'can_process'   => $pending && $r->route_to === 'CHURCH' && in_array($r->post_status, ['ALIVE', 'BLIND'], true),
             ];
@@ -153,7 +172,7 @@ class ChurchReportService
             return ApiResponse::fail('NOT_FOUND', '신고를 찾을 수 없습니다.', 404);
         }
         if ($report->route_to !== 'CHURCH') {
-            return ApiResponse::fail('FORBIDDEN', '긴급 신고는 운영자가 직접 처리합니다. 교회에서는 처리할 수 없습니다.', 403);
+            return ApiResponse::fail('FORBIDDEN', '긴급 신고이거나 처리 기한(3일)이 지나 운영자에게 이관된 신고입니다. 운영자가 처리합니다.', 403);
         }
         if (!in_array($report->case_status, ['WAIT', 'IN_PROGRESS'], true)) {
             return ApiResponse::fail('ALREADY_DONE', '이미 처리된 신고입니다.', 409);
