@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\MessageSettingController;
 use App\Http\Controllers\Api\PushNotificationController;
 use App\Http\Controllers\Api\MessageTemplateController;
+use App\Http\Controllers\Api\ChurchReportController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\OfferingController;
 use App\Http\Controllers\Api\OnboardingController;
@@ -200,6 +201,13 @@ Route::prefix('v4/intro')->middleware(['jwt.auth', 'permission:WEBSITE'])->group
 });
 
 // 관리 > 교회 페이지 "소식·공지" (공개 홈페이지 콘텐츠 — 공유 게시판 gh_new_board_content 재사용, WEBSITE 권한)
+// 교회 페이지 > 게시글 신고함(교회 1차 처리) — 두레이 교회게시판 관리분리 ④
+Route::prefix('v4/churchReport')->middleware(['jwt.auth', 'permission:WEBSITE'])->group(function () {
+    Route::post('/getSummary', [ChurchReportController::class, 'getSummary']);
+    Route::post('/getList',    [ChurchReportController::class, 'getList']);
+    Route::post('/process',    [ChurchReportController::class, 'process']);
+});
+
 Route::prefix('v4/news')->middleware(['jwt.auth', 'permission:WEBSITE'])->group(function () {
     Route::post('/getList',   [NewsController::class, 'getList']);
     Route::post('/register',  [NewsController::class, 'register']);
