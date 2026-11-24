@@ -160,7 +160,7 @@ class ChurchReportService
             ];
         })->all();
 
-        return ApiResponse::success(['enabled' => true, 'total' => $total, 'page' => $page, 'size' => $size, 'list' => $list]);
+        return ApiResponse::success(['enabled' => true, 'total' => $total, 'page' => $page, 'size' => $size, 'list' => $list, 'deadline_days' => \App\Helpers\ReportPolicy::churchDeadlineDays()]);
     }
 
     /**
@@ -223,7 +223,7 @@ class ChurchReportService
         }
         // 기한 초과로 운영자에게 이관된 신고는 교회가 더 처리할 수 없다
         if ($report->route_to !== 'CHURCH' && !empty($report->escalated_at ?? null)) {
-            return ApiResponse::fail('FORBIDDEN', '처리 기한(3일)이 지나 운영자에게 이관된 신고입니다. 운영자가 처리합니다.', 403);
+            return ApiResponse::fail('FORBIDDEN', '처리 기한이 지나 운영자에게 이관된 신고입니다. 운영자가 처리합니다.', 403);
         }
         // 긴급 신고(운영자 직행)는 교회가 「숨김」만 먼저 할 수 있다(더 가리는 쪽이라 안전) — 삭제·무시와 최종 처리는 운영자
         if ($report->route_to !== 'CHURCH') {
