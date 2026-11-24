@@ -264,6 +264,7 @@ class NewsService
             // gh_new_board_comment.account_no 는 gh_account FK(NOT NULL) — 관리자 작성 댓글을
             // 넣을 수 없어(플레이스홀더 계정 없음) 답변은 같은 글의 text_val1에 직접 저장한다.
             $this->boardRepository->update($contentNo, ['text_val1' => $comment]);
+            $this->recordQnaAnswerTime($contentNo, $churchId, true);
 
             AuditLogHelper::logUpdate(
                 memberId: $authMemberId, churchId: $churchId, menuCode: AuditMenuCode::WEBSITE,
@@ -275,6 +276,19 @@ class NewsService
         } catch (\Exception $e) {
             LogHelper::logWrite("[NewsService] answerQna error: " . $e->getMessage(), "news");
             return ApiResponse::fail('INTERNAL_ERROR', '답변 등록 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    /**
+     * 묻고답하기 답변 시각 기록(docs/schema/25) — 관리자 「기한 내 응답률」용.
+     * 답변 등록이면 첫 답변 시각만 남기고(수정해도 유지), 답변 삭제면 행을 지운다. 실패해도 답변 처리에는 영향을 주지 않는다.
+     */
+    private function recordQnaAnswerTime(int $contentNo, int $churchId, bool $answered): void
+    {
+        try {
+            $this->boardRepository->recordQnaAnswerTime($contentNo, $churchId, $answered);
+        } catch (\Throwable $e) {
+            LogHelper::logWrite("[NewsService] recordQnaAnswerTime skipped: " . $e->getMessage(), "news");
         }
     }
 
@@ -290,6 +304,7 @@ class NewsService
 
             $before = (string) ($row->text_val1 ?? '');
             $this->boardRepository->update($contentNo, ['text_val1' => null]);
+            $this->recordQnaAnswerTime($contentNo, $churchId, false);
 
             AuditLogHelper::logUpdate(
                 memberId: $authMemberId, churchId: $churchId, menuCode: AuditMenuCode::WEBSITE,

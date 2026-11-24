@@ -78,4 +78,17 @@ class ChurchBoardRepository
             ->where('content_no', $contentNo)
             ->update(['status' => 'DEAD', 'updated' => now()]);
     }
+
+    /**
+     * 묻고답하기(board 86) 오피스 답변 시각 기록 — docs/schema/25_reg_church_qna_answer.sql.
+     * 답변 등록이면 첫 답변 시각만 남기고(INSERT IGNORE), 답변 삭제면 행을 지운다.
+     */
+    public function recordQnaAnswerTime(int $contentNo, int $churchId, bool $answered): void
+    {
+        if ($answered) {
+            DB::insert('INSERT IGNORE INTO reg_church_qna_answer (content_no, church_no, answered_at) VALUES (?, ?, NOW())', [$contentNo, $churchId]);
+        } else {
+            DB::delete('DELETE FROM reg_church_qna_answer WHERE content_no = ?', [$contentNo]);
+        }
+    }
 }
