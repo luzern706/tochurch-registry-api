@@ -151,12 +151,58 @@ class ChurchReportService
                 'handled_at'    => $r->church_handled_at ?: $r->resolved_at,
                 // 교회가 처리 기한(3일) 안에 처리하지 않아 운영자에게 이관된 시각(이관 건은 처리 버튼 없음)
                 'escalated_at'  => $r->escalated_at ?? null,
-                // 교회 처리 건만 처리 버튼 — 긴급(운영자 직행) 건은 열람만
+                // 교회 처리 건만 숨김·삭제·무시 — 긴급(운영자 직행) 건은 교회가 「숨김」만 먼저 할 수 있고 최종 처리는 운영자가 한다
                 'can_process'   => $pending && $r->route_to === 'CHURCH' && in_array($r->post_status, ['ALIVE', 'BLIND'], true),
+                'can_hide_only' => $pending && $r->route_to === 'OPERATOR' && empty($r->escalated_at ?? null)
+                                   && $r->post_status === 'ALIVE',
+                // 긴급 건을 교회가 숨김 처리한 경우(운영자 최종 처리 대기)
+                'church_hidden' => $pending && $r->route_to === 'OPERATOR' && !empty($r->church_handled_at),
             ];
         })->all();
 
         return ApiResponse::success(['enabled' => true, 'total' => $total, 'page' => $page, 'size' => $size, 'list' => $list]);
+    }
+
+    /**
+     * 긴급(운영자 직행) 신고의 교회 「숨김」 — 글을 블라인드하되 신고는 닫지 않는다(운영자가 최종 처리).
+     * 교회가 처리한 사실만 church_handled_by/at 에 남기고, 작성자에게는 숨김 안내를 보낸다. 신고자 알림은 최종 처리 때 운영자가 보낸다.
+     */
+    private function hideUrgent(int $churchId, int $adminNo, object $report, string $reason): JsonResponse
+    {
+        if (!in_array($report->case_status, ['WAIT', 'IN_PROGRESS'], true)) {
+            return ApiResponse::fail('ALREADY_DONE', '이미 처리된 신고입니다.', 409);
+        }
+        $post = DB::table('gh_new_board_content')->where('content_no', $report->content_no)->where('church_no', $churchId)
+            ->first(['content_no', 'account_no', 'status', 'title', 'board_no']);
+        if (!$post) {
+            return ApiResponse::fail('NOT_FOUND', '신고된 글을 찾을 수 없습니다.', 404);
+        }
+
+        $now = now();
+        try {
+            DB::transaction(function () use ($churchId, $adminNo, $post, $now) {
+                if ($post->status === 'ALIVE') {
+                    DB::table('gh_new_board_content')->where('content_no', $post->content_no)->update(['status' => 'BLIND', 'updated' => DB::raw('updated')]);
+                }
+                // 같은 글의 긴급(운영자 직행) 대기 신고 전체에 교회 숨김 기록 — 신고 상태는 그대로(운영자 최종 처리 대기)
+                DB::table('gh_report')
+                    ->where('target_type', 'post')->where('content_no', $post->content_no)
+                    ->where('church_no', $churchId)->where('route_to', 'OPERATOR')
+                    ->whereIn('case_status', ['WAIT', 'IN_PROGRESS'])
+                    ->update(['church_handled_by' => $adminNo, 'church_handled_at' => $now]);
+            });
+        } catch (Throwable $e) {
+            LogHelper::logWrite('[ChurchReportService] hideUrgent 실패: ' . $e->getMessage(), 'church_report');
+            return ApiResponse::fail('INTERNAL_ERROR', '숨김 처리 중 오류가 발생했습니다.', 500);
+        }
+
+        if ($post->account_no) {
+            $this->notifyAccount((int) $post->account_no, 'church_post_blind',
+                '작성하신 글이 신고되어 교회 관리자가 우선 숨김 처리했습니다(운영자가 확인 중). 사유: ' . $reason,
+                (int) $post->board_no, (int) $post->content_no, (string) $post->title);
+        }
+
+        return ApiResponse::success(['processed' => 1, 'seqs' => [(int) $report->seq], 'final' => false]);
     }
 
     /**
@@ -167,12 +213,24 @@ class ChurchReportService
         if (!$this->enabled()) {
             return ApiResponse::fail('NOT_READY', '게시글 신고함 기능이 아직 준비되지 않았습니다.', 409);
         }
-        $report = $this->base($churchId)->where('r.seq', $seq)->first(['r.seq', 'r.content_no', 'r.route_to', 'r.case_status']);
+        $cols = ['r.seq', 'r.content_no', 'r.route_to', 'r.case_status'];
+        if ($this->hasEscalatedColumn()) {
+            $cols[] = 'r.escalated_at';
+        }
+        $report = $this->base($churchId)->where('r.seq', $seq)->first($cols);
         if (!$report) {
             return ApiResponse::fail('NOT_FOUND', '신고를 찾을 수 없습니다.', 404);
         }
+        // 기한 초과로 운영자에게 이관된 신고는 교회가 더 처리할 수 없다
+        if ($report->route_to !== 'CHURCH' && !empty($report->escalated_at ?? null)) {
+            return ApiResponse::fail('FORBIDDEN', '처리 기한(3일)이 지나 운영자에게 이관된 신고입니다. 운영자가 처리합니다.', 403);
+        }
+        // 긴급 신고(운영자 직행)는 교회가 「숨김」만 먼저 할 수 있다(더 가리는 쪽이라 안전) — 삭제·무시와 최종 처리는 운영자
         if ($report->route_to !== 'CHURCH') {
-            return ApiResponse::fail('FORBIDDEN', '긴급 신고이거나 처리 기한(3일)이 지나 운영자에게 이관된 신고입니다. 운영자가 처리합니다.', 403);
+            if ($action !== 'hide') {
+                return ApiResponse::fail('FORBIDDEN', '긴급 신고는 교회에서 「숨김」만 할 수 있습니다. 삭제·무시와 최종 처리는 운영자가 합니다.', 403);
+            }
+            return $this->hideUrgent($churchId, $adminNo, $report, $reason);
         }
         if (!in_array($report->case_status, ['WAIT', 'IN_PROGRESS'], true)) {
             return ApiResponse::fail('ALREADY_DONE', '이미 처리된 신고입니다.', 409);
