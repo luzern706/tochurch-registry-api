@@ -16,10 +16,12 @@ use Illuminate\Support\Facades\Hash;
 class AuthService
 {
     protected AuthRepository $authRepository;
+    protected NhnEmailService $nhnEmailService;
 
-    public function __construct(AuthRepository $authRepository)
+    public function __construct(AuthRepository $authRepository, NhnEmailService $nhnEmailService)
     {
         $this->authRepository = $authRepository;
+        $this->nhnEmailService = $nhnEmailService;
     }
 
     /**
@@ -113,6 +115,85 @@ class AuthService
         } catch (\Exception $e) {
             LogHelper::logWrite("[AuthService] checkSetupToken error: " . $e->getMessage(), "auth");
             return ApiResponse::fail('INTERNAL_ERROR', '처리 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    /**
+     * 비밀번호 재설정 링크 요청 (로그인 화면 「비밀번호 찾기」, 로그인 전 공개 호출).
+     *
+     * 가입 여부 노출을 막기 위해 이메일이 있든 없든, 요청 제한에 걸렸든 항상 같은 성공 응답을 준다.
+     * 실제 발송은 응답을 보낸 뒤 처리해 응답 시간으로도 가입 여부가 드러나지 않게 한다.
+     * 링크는 기존 「비밀번호 설정 링크」와 같은 토큰 테이블·같은 /set-password 화면을 쓴다.
+     */
+    public function requestPasswordReset(string $email): JsonResponse
+    {
+        try {
+            $normalized = mb_strtolower(trim($email));
+            $admins = $this->authRepository->findAliveAdminsByEmail($normalized);
+
+            if (!empty($admins)) {
+                app()->terminating(function () use ($admins, $normalized) {
+                    $this->sendPasswordResetMails($admins, $normalized);
+                });
+            }
+
+            return ApiResponse::success(null);
+        } catch (\Exception $e) {
+            LogHelper::logWrite("[AuthService] requestPasswordReset error: " . $e->getMessage(), "auth");
+            return ApiResponse::fail('INTERNAL_ERROR', '처리 중 오류가 발생했습니다.', 500);
+        }
+    }
+
+    /** 계정마다 요청 제한(연속 간격·시간당 횟수)을 확인하고 토큰 발급 → 메일 발송. 실패는 로그만 남긴다(응답은 이미 나갔다). */
+    private function sendPasswordResetMails(array $admins, string $toEmail): void
+    {
+        try {
+            $baseUrl = rtrim((string) config('services.registry_password_reset.front_url'), '/');
+            if ($baseUrl === '') {
+                LogHelper::logWrite('[AuthService] password reset mail skipped — REGISTRY_SETUP_FRONT_URL 미설정', 'auth');
+                return;
+            }
+            if (!$this->nhnEmailService->isConfigured()) {
+                LogHelper::logWrite('[AuthService] password reset mail skipped — NHN_EMAIL_* 미설정', 'auth');
+                return;
+            }
+            if ($this->authRepository->isEmailSuppressed($toEmail)) {
+                LogHelper::logWrite('[AuthService] password reset mail skipped — suppressed email', 'auth');
+                return;
+            }
+
+            $minInterval = (int) config('services.registry_password_reset.min_interval_seconds', 60);
+            $maxPerHour = (int) config('services.registry_password_reset.max_per_hour', 5);
+            $hours = (int) config('services.registry_password_reset.valid_hours', 24);
+
+            foreach ($admins as $admin) {
+                $adminNo = (int) $admin->admin_no;
+
+                if ($this->authRepository->countRecentTokens($adminNo, $minInterval) > 0
+                    || $this->authRepository->countRecentTokens($adminNo, 3600) >= $maxPerHour) {
+                    LogHelper::logWrite("[AuthService] password reset skipped — rate limited (admin_no {$adminNo})", 'auth');
+                    continue;
+                }
+
+                $rawToken = bin2hex(random_bytes(32));
+                $this->authRepository->issueSetupToken($adminNo, hash('sha256', $rawToken), now()->addHours($hours));
+
+                $result = $this->nhnEmailService->sendRegistryPasswordReset(
+                    $toEmail,
+                    (string) ($admin->church_name ?? ''),
+                    (string) ($admin->admin_name ?? ''),
+                    (string) $admin->login_id,
+                    $baseUrl . '?token=' . $rawToken,
+                    $hours
+                );
+
+                // 토큰·링크는 로그에 남기지 않는다
+                if (!$result['success']) {
+                    LogHelper::logWrite("[AuthService] password reset mail failed (admin_no {$adminNo}): {$result['message']}", 'auth');
+                }
+            }
+        } catch (\Throwable $e) {
+            LogHelper::logWrite('[AuthService] sendPasswordResetMails error: ' . $e->getMessage(), 'auth');
         }
     }
 

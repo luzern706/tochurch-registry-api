@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Helpers\JwtHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminSignInRequest;
+use App\Http\Requests\PasswordResetRequest;
 use App\Http\Requests\SetupPasswordRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
@@ -36,6 +37,12 @@ class AuthController extends Controller
     {
         $v = $request->validated();
         return $this->authService->setupPassword($v['token'], $v['new_password']);
+    }
+
+    /** 비밀번호 재설정 링크 요청 (로그인 전) — 가입 여부와 무관하게 항상 같은 성공 응답 */
+    public function requestPasswordReset(PasswordResetRequest $request): JsonResponse
+    {
+        return $this->authService->requestPasswordReset($request->validated()['email']);
     }
 
     public function signOut(Request $request): JsonResponse

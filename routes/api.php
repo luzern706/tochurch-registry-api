@@ -61,6 +61,8 @@ Route::prefix('v4/auth')->group(function () {
     // 02_gh_admin_api 가 발급한 "교적 비밀번호 설정 링크" — 로그인 전이라 jwt.auth 제외, 토큰 추측 방지용 호출 제한
     Route::post('/checkSetupToken', [AuthController::class, 'checkSetupToken'])->middleware('throttle:20,1');
     Route::post('/setupPassword',   [AuthController::class, 'setupPassword'])->middleware('throttle:10,1');
+    // 「비밀번호 찾기」 — 가입 여부와 무관하게 항상 같은 성공 응답. 같은 계정 1분 1회·1시간 5회 제한은 서비스에서, IP 당 호출 제한은 여기서
+    Route::post('/requestPasswordReset', [AuthController::class, 'requestPasswordReset'])->middleware('throttle:10,1');
 });
 
 Route::prefix('v4/auth')->middleware('jwt.auth')->group(function () {
